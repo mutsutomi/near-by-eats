@@ -45,7 +45,18 @@ export default function Home() {
         }
       } else {
         setSearchState('error');
-        setError(data.error_message || 'レストランの検索に失敗しました');
+        // APIエラーの詳細を表示
+        let errorMessage = 'レストランの検索に失敗しました';
+        if (data.status === 'REQUEST_DENIED') {
+          errorMessage = 'Google Places APIキーが無効です。管理者にお問い合わせください。';
+        } else if (data.status === 'OVER_QUERY_LIMIT') {
+          errorMessage = 'API利用制限に達しました。しばらく時間をおいてから再試行してください。';
+        } else if (data.status === 'ZERO_RESULTS') {
+          errorMessage = '近くにレストランが見つかりませんでした。';
+        } else if (data.error_message) {
+          errorMessage = `APIエラー: ${data.error_message}`;
+        }
+        setError(errorMessage);
       }
     } catch (err) {
       setSearchState('error');

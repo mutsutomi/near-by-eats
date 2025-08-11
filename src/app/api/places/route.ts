@@ -74,11 +74,11 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
 
     if (data.status !== 'OK') {
-      // API エラーの場合はデモデータにフォールバック
-      console.log('Google Places API error, falling back to demo data:', data.status, data.error_message);
+      console.error('Google Places API error:', data.status, data.error_message);
       return NextResponse.json({
-        restaurants: DEMO_RESTAURANTS,
-        status: 'OK'
+        restaurants: [],
+        status: data.status,
+        error_message: data.error_message || 'Google Places APIの呼び出しに失敗しました'
       } as PlacesApiResponse);
     }
 

@@ -31,14 +31,26 @@ export default function Home() {
         }),
       });
 
+      let data: PlacesApiResponse;
+      
       if (!response.ok) {
         if (response.status === 429) {
-          throw new Error('API呼び出し制限に達しました。1分後に再試行してください。');
+          // 429エラーの場合、レスポンス内容を取得して詳細メッセージを表示
+          try {
+            data = await response.json();
+            setSearchState('error');
+            setError(data.error_message || 'API呼び出し制限に達しました。1分後に再試行してください。');
+            return;
+          } catch {
+            setSearchState('error');
+            setError('API呼び出し制限に達しました。1分後に再試行してください。');
+            return;
+          }
         }
         throw new Error('ネットワークエラーが発生しました');
       }
 
-      const data: PlacesApiResponse = await response.json();
+      data = await response.json();
 
       if (data.status === 'OK') {
         setRestaurants(data.restaurants);
@@ -57,7 +69,12 @@ export default function Home() {
         } else if (data.status === 'ZERO_RESULTS') {
           errorMessage = '近くにレストランが見つかりませんでした。';
         } else if (data.error_message) {
-          errorMessage = `APIエラー: ${data.error_message}`;
+          // レート制限やその他のエラーメッセージをそのまま表示
+          if (data.error_message.includes('API呼び出し制限') || data.error_message.includes('制限に達しました')) {
+            errorMessage = data.error_message;
+          } else {
+            errorMessage = `APIエラー: ${data.error_message}`;
+          }
         }
         setError(errorMessage);
       }
@@ -149,22 +166,46 @@ export default function Home() {
         );
 
       case 'error':
+        const isRateLimit = error.includes('API呼び出し制限') || error.includes('制限に達しました');
+        
         return (
           <div className="bg-white rounded-lg p-8 shadow-lg max-w-md w-full text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              isRateLimit ? 'bg-orange-100' : 'bg-red-100'
+            }`}>
+              {isRateLimit ? (
+                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
             </div>
             <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              エラーが発生しました
+              {isRateLimit ? 'API利用制限' : 'エラーが発生しました'}
             </h2>
             <p className="text-gray-600 text-sm mb-6">
               {error}
             </p>
+            {isRateLimit && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-sm text-orange-800">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>しばらくお待ちいただいてから再試行してください</span>
+                </div>
+              </div>
+            )}
             <button
               onClick={handleRetry}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+              className={`px-6 py-3 text-white rounded-lg font-medium transition-colors duration-200 ${
+                isRateLimit 
+                  ? 'bg-orange-600 hover:bg-orange-700' 
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
             >
               もう一度試す
             </button>

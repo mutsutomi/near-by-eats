@@ -11,10 +11,12 @@ export default function Home() {
   const [searchState, setSearchState] = useState<SearchState>('idle');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [error, setError] = useState<string>('');
+  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
     setError('');
+    setUserLocation({ latitude, longitude });
 
     try {
       const response = await fetch('/api/places', {
@@ -94,6 +96,7 @@ export default function Home() {
     setSearchState('idle');
     setError('');
     setRestaurants([]);
+    setUserLocation(null);
   };
 
   const renderContent = () => {
@@ -159,7 +162,11 @@ export default function Home() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {restaurants.map((restaurant) => (
-                <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                <RestaurantCard 
+                  key={restaurant.id} 
+                  restaurant={restaurant}
+                  userLocation={userLocation}
+                />
               ))}
             </div>
           </div>

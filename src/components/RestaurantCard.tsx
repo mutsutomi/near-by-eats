@@ -1,11 +1,28 @@
 import { Restaurant } from '@/types';
+import { calculateDistance, formatDistance } from '@/utils/distance';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
-const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
-  const { name, rating, address, opening_hours, price_level } = restaurant;
+const RestaurantCard = ({ restaurant, userLocation }: RestaurantCardProps) => {
+  const { name, rating, address, opening_hours, price_level, geometry } = restaurant;
+
+  const getDistance = () => {
+    if (!userLocation || !geometry?.location) {
+      return null;
+    }
+    
+    const distance = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      geometry.location.lat,
+      geometry.location.lng
+    );
+    
+    return formatDistance(distance);
+  };
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -78,9 +95,22 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
             )}
           </div>
 
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-            {address}
-          </p>
+          <div className="space-y-2 mb-3">
+            <p className="text-gray-600 text-sm line-clamp-2">
+              {address}
+            </p>
+            {getDistance() && (
+              <div className="flex items-center gap-1 text-blue-600">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {getDistance()}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">

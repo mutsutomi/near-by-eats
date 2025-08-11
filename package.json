@@ -1,0 +1,17 @@
+{
+  "name": "near-by-eats",
+  "version": "1.0.0",
+  "description": "A nearby restaurant discovery application",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "restaurant",
+    "food",
+    "nearby",
+    "discovery"
+  ],
+  "author": "",
+  "license": "ISC"
+}

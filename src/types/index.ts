@@ -28,7 +28,7 @@ export interface PlacesApiRequest {
 
 export interface PlacesApiResponse {
   restaurants: Restaurant[];
-  status: 'OK' | 'ZERO_RESULTS' | 'ERROR';
+  status: 'OK' | 'ZERO_RESULTS' | 'ERROR' | 'REQUEST_DENIED' | 'OVER_QUERY_LIMIT' | 'INVALID_REQUEST' | 'NOT_FOUND';
   error_message?: string;
 }
 

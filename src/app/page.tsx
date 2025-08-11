@@ -32,6 +32,9 @@ export default function Home() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('API呼び出し制限に達しました。1分後に再試行してください。');
+        }
         throw new Error('ネットワークエラーが発生しました');
       }
 

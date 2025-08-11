@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PlacesApiRequest, PlacesApiResponse, Restaurant } from '@/types';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
@@ -50,6 +51,31 @@ const DEMO_RESTAURANTS: Restaurant[] = [
 
 export async function POST(request: NextRequest) {
   try {
+    // IPアドレスベースのレート制限チェック
+    const ip = request.headers.get('x-forwarded-for') || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    
+    const rateLimit = checkRateLimit(ip, 5, 60 * 1000); // 5回/分
+    
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { 
+          restaurants: [], 
+          status: 'ERROR', 
+          error_message: 'API呼び出し制限に達しました。1分後に再試行してください。'
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '5',
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+          }
+        }
+      );
+    }
+
     const body: PlacesApiRequest = await request.json();
     const { latitude, longitude, radius = 1500, type = 'restaurant', language = 'ja' } = body;
 

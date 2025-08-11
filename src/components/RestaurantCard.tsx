@@ -55,7 +55,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              {rating ? (
+              {rating !== undefined && rating !== null ? (
                 <>
                   <div className="flex items-center" aria-label={`評価: 5つ星中${rating}つ星`}>
                     {renderStars(rating)}

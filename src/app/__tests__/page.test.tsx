@@ -253,7 +253,7 @@ describe('Home Page Integration Tests', () => {
       // エラー状態の表示確認
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
-        expect(screen.getByText('APIエラーが発生しました')).toBeInTheDocument()
+        expect(screen.getByText('APIエラー: APIエラーが発生しました')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
       })
     })
@@ -607,6 +607,48 @@ describe('Home Page Integration Tests', () => {
       // エラー状態でもh1とh2が存在することを確認
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Near-by Eats')
       expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('エラーが発生しました')
+    })
+
+    it('Google Places API REQUEST_DENIED エラーの処理', async () => {
+      // Mock successful geolocation
+      const mockPosition = {
+        coords: {
+          latitude: 35.6762,
+          longitude: 139.6503,
+        },
+      }
+
+      const mockGeolocation = {
+        getCurrentPosition: jest.fn((success) => success(mockPosition))
+      }
+      Object.defineProperty(global.navigator, 'geolocation', {
+        value: mockGeolocation,
+        writable: true,
+      })
+
+      // Mock API error response for REQUEST_DENIED
+      const mockApiResponse: PlacesApiResponse = {
+        restaurants: [],
+        status: 'REQUEST_DENIED',
+        error_message: 'The provided API key is invalid.'
+      }
+
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockApiResponse)
+      })
+
+      render(<Home />)
+
+      const locationButton = screen.getByRole('button', { name: '現在地から近くのレストランを検索' })
+      await userEvent.click(locationButton)
+
+      // REQUEST_DENIED専用のエラーメッセージを確認
+      await waitFor(() => {
+        expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
+        expect(screen.getByText('Google Places APIキーが無効です。管理者にお問い合わせください。')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+      })
     })
   })
 })

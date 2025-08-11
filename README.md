@@ -1,21 +1,31 @@
-# near-by-eats
+# Near-by Eats
 
-near-by-eats の Web アプリ開発用リポジトリ
+現在地から近くのレストランを検索するNext.jsアプリケーション
 
-A nearby restaurant discovery application.
+## 機能
 
-## Getting Started
+- ブラウザの位置情報APIを使用した現在地取得
+- Google Places APIを使用したレストラン検索
+- レスポンシブデザイン対応
+- 日本語UI
+- アクセシビリティ対応
 
-This project helps users discover restaurants in their area.
+## 技術スタック
 
-## Installation
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Google Places API
+
+## 開発
 
 ```bash
 npm install
+npm run dev
 ```
 
-## Usage
+## 環境変数
 
-```bash
-npm start
+```env
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```

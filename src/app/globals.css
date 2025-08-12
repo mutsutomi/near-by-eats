@@ -25,3 +25,20 @@ body {
     text-wrap: balance;
   }
 }
+
+/* スライダーのカスタムスタイル */
+.slider::-webkit-slider-thumb {
+  @apply appearance-none w-5 h-5 bg-blue-600 rounded-full cursor-pointer transition-all hover:bg-blue-700 hover:scale-110;
+}
+
+.slider::-moz-range-thumb {
+  @apply w-5 h-5 bg-blue-600 rounded-full cursor-pointer transition-all hover:bg-blue-700 hover:scale-110 border-0;
+}
+
+.slider::-webkit-slider-thumb:active {
+  @apply scale-125;
+}
+
+.slider::-moz-range-thumb:active {
+  @apply scale-125;
+}

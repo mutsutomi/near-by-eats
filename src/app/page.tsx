@@ -12,6 +12,7 @@ export default function Home() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [error, setError] = useState<string>('');
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [searchRadius, setSearchRadius] = useState<number>(1500);
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
@@ -27,7 +28,7 @@ export default function Home() {
         body: JSON.stringify({
           latitude,
           longitude,
-          radius: 1500,
+          radius: searchRadius,
           type: 'restaurant',
           language: 'ja'
         }),
@@ -115,8 +116,26 @@ export default function Home() {
                 レストランを検索
               </h2>
               <p className="text-gray-600 text-sm">
-                現在地から1.5km以内の レストランを検索します
+                現在地から{searchRadius / 1000}km以内の レストランを検索します
               </p>
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                検索範囲: {searchRadius / 1000}km
+              </label>
+              <input
+                type="range"
+                min="500"
+                max="5000"
+                step="100"
+                value={searchRadius}
+                onChange={(e) => setSearchRadius(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>0.5km</span>
+                <span>5km</span>
+              </div>
             </div>
             <LocationButton
               onLocationSuccess={handleLocationSuccess}
@@ -147,7 +166,7 @@ export default function Home() {
                 近くのレストラン ({restaurants.length}件)
               </h2>
               <p className="text-gray-600">
-                現在地から1.5km以内のレストラン
+                現在地から{searchRadius / 1000}km以内のレストラン
               </p>
             </div>
 

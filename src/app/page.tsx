@@ -220,22 +220,30 @@ export default function Home() {
                 再検索
               </button>
               
-              <div className="flex items-center gap-2">
+              <div className="relative flex items-center gap-2">
                 <label htmlFor="sort" className="text-sm font-medium text-gray-700">
                   並び替え:
                 </label>
-                <select
-                  id="sort"
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value as SortOption)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="default">デフォルト</option>
-                  <option value="rating">評価が高い順</option>
-                  <option value="distance">距離が近い順</option>
-                  <option value="price-low">価格が安い順</option>
-                  <option value="price-high">価格が高い順</option>
-                </select>
+                <div className="relative">
+                  <select
+                    id="sort"
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value as SortOption)}
+                    className="px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium appearance-none cursor-pointer"
+                    style={{ minWidth: '180px' }}
+                  >
+                    <option value="default" className="text-gray-700">デフォルト</option>
+                    <option value="rating" className="text-gray-700">評価が高い順</option>
+                    <option value="distance" className="text-gray-700">距離が近い順</option>
+                    <option value="price-low" className="text-gray-700">価格が安い順</option>
+                    <option value="price-high" className="text-gray-700">価格が高い順</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
             

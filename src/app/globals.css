@@ -42,3 +42,25 @@ body {
 .slider::-moz-range-thumb:active {
   @apply scale-125;
 }
+
+/* セレクトボックスのフォント修正 */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+}
+
+/* Safariでのセレクトボックス修正 */
+select::-webkit-select {
+  color: inherit;
+  background-color: inherit;
+}
+
+/* オプションのスタイル */
+select option {
+  color: #374151;
+  background-color: white;
+  font-weight: normal;
+}

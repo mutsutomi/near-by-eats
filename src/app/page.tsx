@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
+import { calculateDistance } from '@/utils/distance';
 
 type SearchState = 'idle' | 'getting-location' | 'searching' | 'success' | 'error';
+
+type SortOption = 'default' | 'rating' | 'distance' | 'price-low' | 'price-high';
 
 export default function Home() {
   const [searchState, setSearchState] = useState<SearchState>('idle');
@@ -13,6 +16,7 @@ export default function Home() {
   const [error, setError] = useState<string>('');
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [searchRadius, setSearchRadius] = useState<number>(1500);
+  const [sortOption, setSortOption] = useState<SortOption>('default');
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
@@ -100,6 +104,44 @@ export default function Home() {
     setUserLocation(null);
   };
 
+  const sortedRestaurants = useMemo(() => {
+    if (!restaurants.length) return [];
+    
+    const sorted = [...restaurants];
+    
+    switch (sortOption) {
+      case 'rating':
+        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      
+      case 'distance':
+        if (!userLocation) return sorted;
+        return sorted.sort((a, b) => {
+          const distA = a.geometry?.location ? calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            a.geometry.location.lat,
+            a.geometry.location.lng
+          ) : Infinity;
+          const distB = b.geometry?.location ? calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            b.geometry.location.lat,
+            b.geometry.location.lng
+          ) : Infinity;
+          return distA - distB;
+        });
+      
+      case 'price-low':
+        return sorted.sort((a, b) => (a.price_level || 0) - (b.price_level || 0));
+      
+      case 'price-high':
+        return sorted.sort((a, b) => (b.price_level || 0) - (a.price_level || 0));
+      
+      default:
+        return sorted;
+    }
+  }, [restaurants, sortOption, userLocation]);
+
   const renderContent = () => {
     switch (searchState) {
       case 'idle':
@@ -170,17 +212,35 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="text-center mb-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
               <button
                 onClick={handleRetry}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
               >
                 再検索
               </button>
+              
+              <div className="flex items-center gap-2">
+                <label htmlFor="sort" className="text-sm font-medium text-gray-700">
+                  並び替え:
+                </label>
+                <select
+                  id="sort"
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as SortOption)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="default">デフォルト</option>
+                  <option value="rating">評価が高い順</option>
+                  <option value="distance">距離が近い順</option>
+                  <option value="price-low">価格が安い順</option>
+                  <option value="price-high">価格が高い順</option>
+                </select>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restaurants.map((restaurant) => (
+              {sortedRestaurants.map((restaurant) => (
                 <RestaurantCard 
                   key={restaurant.id} 
                   restaurant={restaurant}

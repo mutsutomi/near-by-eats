@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: PlacesApiRequest = await request.json();
-    const { latitude, longitude, radius = 1500, type = 'restaurant', language = 'ja' } = body;
+    const { latitude, longitude, radius = 1500, type = 'restaurant', language = 'ja', includeAllTypes = false } = body;
 
     if (!latitude || !longitude) {
       return NextResponse.json(
@@ -94,35 +94,83 @@ export async function POST(request: NextRequest) {
       } as PlacesApiResponse);
     }
 
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
+    const allRestaurants: Restaurant[] = [];
+    let nextPageToken: string | undefined;
+    let pageCount = 0;
+    const maxPages = 3; // 最大3ページ（60件）まで取得
 
-    if (data.status !== 'OK') {
-      console.error('Google Places API error:', data.status, data.error_message);
-      return NextResponse.json({
-        restaurants: [],
-        status: data.status,
-        error_message: data.error_message || 'Google Places APIの呼び出しに失敗しました'
-      } as PlacesApiResponse);
+    // より多くの飲食店を取得するため、複数のタイプで検索する場合
+    const searchTypes = includeAllTypes 
+      ? ['restaurant', 'food', 'cafe', 'bar', 'meal_takeaway'] 
+      : [type];
+
+    // 各タイプで検索を実行
+    for (const searchType of searchTypes) {
+      nextPageToken = undefined;
+      pageCount = 0;
+      
+      // 最初のリクエスト
+      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${searchType}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
+    
+    do {
+      // ページトークンがある場合は追加
+      if (nextPageToken) {
+        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${nextPageToken}&key=${GOOGLE_MAPS_API_KEY}`;
+        // ページトークン使用時は2秒待機（Google API要件）
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        console.error('Google Places API error:', data.status, data.error_message);
+        // 既に取得したデータがある場合はそれを返す
+        if (allRestaurants.length > 0) {
+          break;
+        }
+        return NextResponse.json({
+          restaurants: [],
+          status: data.status,
+          error_message: data.error_message || 'Google Places APIの呼び出しに失敗しました'
+        } as PlacesApiResponse);
+      }
+
+      // レストランデータを追加
+      if (data.results && data.results.length > 0) {
+        const restaurants: Restaurant[] = data.results.map((place: any) => ({
+          id: place.place_id || place.id,
+          name: place.name,
+          rating: place.rating,
+          address: place.formatted_address || place.vicinity,
+          vicinity: place.vicinity,
+          place_id: place.place_id,
+          geometry: place.geometry,
+          types: place.types,
+          opening_hours: place.opening_hours,
+          price_level: place.price_level
+        }));
+        allRestaurants.push(...restaurants);
+      }
+
+      // 次のページトークンを設定
+      nextPageToken = data.next_page_token;
+      pageCount++;
+
+      console.log(`Page ${pageCount}: ${data.results?.length || 0} restaurants found, total: ${allRestaurants.length}`);
+
+    } while (nextPageToken && pageCount < maxPages);
     }
 
-    const restaurants: Restaurant[] = data.results.map((place: any) => ({
-      id: place.place_id || place.id,
-      name: place.name,
-      rating: place.rating,
-      address: place.formatted_address || place.vicinity,
-      vicinity: place.vicinity,
-      place_id: place.place_id,
-      geometry: place.geometry,
-      types: place.types,
-      opening_hours: place.opening_hours,
-      price_level: place.price_level
-    }));
+    // 重複を除去（同じplace_idを持つレストランを削除）
+    const uniqueRestaurants = allRestaurants.filter((restaurant, index, self) =>
+      index === self.findIndex((r) => r.place_id === restaurant.place_id)
+    );
+
+    console.log(`Total unique restaurants found: ${uniqueRestaurants.length}`);
 
     return NextResponse.json({
-      restaurants,
+      restaurants: uniqueRestaurants,
       status: 'OK'
     } as PlacesApiResponse);
 

@@ -24,6 +24,7 @@ export interface PlacesApiRequest {
   radius?: number;
   type?: string;
   language?: string;
+  includeAllTypes?: boolean; // 全ての飲食関連タイプを含めるかどうか
 }
 
 export interface PlacesApiResponse {

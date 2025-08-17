@@ -4,9 +4,11 @@ import { Restaurant } from '@/types'
 
 // Next.js Link のモック
 jest.mock('next/link', () => {
-  return ({ children, href, ...props }: any) => {
+  const Link = ({ children, href, ...props }: any) => {
     return <a href={href} {...props}>{children}</a>;
   };
+  Link.displayName = 'Link';
+  return Link;
 });
 
 // Mock restaurant data for testing

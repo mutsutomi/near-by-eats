@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react'
 import RestaurantCard from '../RestaurantCard'
 import { Restaurant } from '@/types'
 
+// Next.js Link のモック
+jest.mock('next/link', () => {
+  return ({ children, href, ...props }: any) => {
+    return <a href={href} {...props}>{children}</a>;
+  };
+});
+
 // Mock restaurant data for testing
 const mockRestaurantComplete: Restaurant = {
   id: 'test-1',
@@ -52,8 +59,10 @@ describe('RestaurantCard', () => {
       // 価格帯の表示確認
       expect(screen.getByLabelText('価格帯: 2段階')).toBeInTheDocument()
       
-      // 詳細ボタンの表示確認
-      expect(screen.getByLabelText('テストレストランの詳細を表示')).toBeInTheDocument()
+      // 詳細リンクの表示確認
+      const detailLink = screen.getByLabelText('テストレストランの詳細を表示')
+      expect(detailLink).toBeInTheDocument()
+      expect(detailLink).toHaveAttribute('href', '/restaurant/test-1')
     })
 
     it('星の評価を正しく表示する', () => {
@@ -110,7 +119,9 @@ describe('RestaurantCard', () => {
       
       expect(screen.getByText('最小限レストラン')).toBeInTheDocument()
       expect(screen.getByText('東京都新宿区テスト町4-5-6')).toBeInTheDocument()
-      expect(screen.getByLabelText('最小限レストランの詳細を表示')).toBeInTheDocument()
+      const detailLink = screen.getByLabelText('最小限レストランの詳細を表示')
+      expect(detailLink).toBeInTheDocument()
+      expect(detailLink).toHaveAttribute('href', '/restaurant/test-2')
     })
   })
 
@@ -166,9 +177,10 @@ describe('RestaurantCard', () => {
       const heading = screen.getByRole('heading', { level: 3 })
       expect(heading).toHaveTextContent('テストレストラン')
       
-      // ボタン要素が適切に設定されている
-      const button = screen.getByRole('button', { name: 'テストレストランの詳細を表示' })
-      expect(button).toBeInTheDocument()
+      // リンク要素が適切に設定されている
+      const link = screen.getByRole('link', { name: 'テストレストランの詳細を表示' })
+      expect(link).toBeInTheDocument()
+      expect(link).toHaveAttribute('href', '/restaurant/test-1')
     })
   })
 
@@ -228,6 +240,27 @@ describe('RestaurantCard', () => {
       render(<RestaurantCard restaurant={restaurantWithLongName} />)
       
       expect(screen.getByText('とても長いレストラン名でテキストが折り返されることを確認するためのテストデータです')).toBeInTheDocument()
+    })
+  })
+
+  describe('詳細リンクの動作', () => {
+    it('place_idがある場合はplace_idを使用してリンクを生成する', () => {
+      const restaurantWithPlaceId: Restaurant = {
+        ...mockRestaurantComplete,
+        place_id: 'place-123'
+      }
+      
+      render(<RestaurantCard restaurant={restaurantWithPlaceId} />)
+      
+      const detailLink = screen.getByLabelText('テストレストランの詳細を表示')
+      expect(detailLink).toHaveAttribute('href', '/restaurant/place-123')
+    })
+
+    it('place_idがない場合はidを使用してリンクを生成する', () => {
+      render(<RestaurantCard restaurant={mockRestaurantComplete} />)
+      
+      const detailLink = screen.getByLabelText('テストレストランの詳細を表示')
+      expect(detailLink).toHaveAttribute('href', '/restaurant/test-1')
     })
   })
 })

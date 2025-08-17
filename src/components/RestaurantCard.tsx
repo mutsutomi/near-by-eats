@@ -1,5 +1,6 @@
 import { Restaurant } from '@/types';
 import { calculateDistance, formatDistance } from '@/utils/distance';
+import Link from 'next/link';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -127,12 +128,13 @@ const RestaurantCard = ({ restaurant, userLocation }: RestaurantCardProps) => {
             </div>
           )}
           
-          <button
+          <Link
+            href={`/restaurant/${restaurant.place_id || restaurant.id}`}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200"
             aria-label={`${name}の詳細を表示`}
           >
             詳細を見る
-          </button>
+          </Link>
         </div>
       </div>
     </div>

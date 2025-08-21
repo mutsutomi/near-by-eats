@@ -1,5 +1,6 @@
 import { Restaurant } from '@/types';
 import { calculateDistance, formatDistance } from '@/utils/distance';
+import { getJapaneseGenreName } from '@/utils/genre';
 import Link from 'next/link';
 
 interface RestaurantCardProps {
@@ -8,7 +9,7 @@ interface RestaurantCardProps {
 }
 
 const RestaurantCard = ({ restaurant, userLocation }: RestaurantCardProps) => {
-  const { name, rating, address, opening_hours, price_level, geometry } = restaurant;
+  const { name, rating, address, opening_hours, price_level, geometry, types } = restaurant;
 
   const getDistance = () => {
     if (!userLocation || !geometry?.location) {
@@ -97,6 +98,22 @@ const RestaurantCard = ({ restaurant, userLocation }: RestaurantCardProps) => {
           </div>
 
           <div className="space-y-2 mb-3">
+            {types && types.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {types.slice(0, 3).map((type, index) => {
+                  const genreName = getJapaneseGenreName(type);
+                  if (!genreName) return null;
+                  return (
+                    <span
+                      key={index}
+                      className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium"
+                    >
+                      {genreName}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <p className="text-gray-600 text-sm line-clamp-2">
               {address}
             </p>

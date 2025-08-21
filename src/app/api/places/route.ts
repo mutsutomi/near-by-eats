@@ -96,10 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     const allRestaurants: Restaurant[] = [];
-    let nextPageToken: string | undefined;
-    let pageCount = 0;
-    const maxPages = 3; // 最大3ページ（60件）まで取得
-
+    
     // 検索するタイプを決定
     let searchTypes: string[];
     
@@ -122,62 +119,89 @@ export async function POST(request: NextRequest) {
     
     console.log(`Search types: [${searchTypes.join(', ')}], filter genres: [${genres?.join(', ') || 'none'}]`);
 
-    // 各タイプで検索を実行
-    for (const searchType of searchTypes) {
-      nextPageToken = undefined;
-      pageCount = 0;
+    // パフォーマンス改善のための設定
+    const MAX_TOTAL_PAGES = 5; // 全体での最大ページ数
+    const MAX_PAGES_PER_TYPE = 2; // 各タイプごとの最大ページ数
+    const TIMEOUT_MS = 25000; // 25秒のタイムアウト
+    const startTime = Date.now();
+
+    // Promise.allを使用して並列処理を行う
+    const searchPromises = searchTypes.map(async (searchType) => {
+      let nextPageToken: string | undefined;
+      let pageCount = 0;
+      const typeRestaurants: Restaurant[] = [];
       
       // 最初のリクエスト
       let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${searchType}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
     
-    do {
-      // ページトークンがある場合は追加
-      if (nextPageToken) {
-        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${nextPageToken}&key=${GOOGLE_MAPS_API_KEY}`;
-        // ページトークン使用時は2秒待機（Google API要件）
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        console.error('Google Places API error:', data.status, data.error_message);
-        // 既に取得したデータがある場合はそれを返す
-        if (allRestaurants.length > 0) {
+      do {
+        // タイムアウトチェック
+        if (Date.now() - startTime > TIMEOUT_MS) {
+          console.log(`Timeout reached for search type: ${searchType}`);
           break;
         }
-        return NextResponse.json({
-          restaurants: [],
-          status: data.status,
-          error_message: data.error_message || 'Google Places APIの呼び出しに失敗しました'
-        } as PlacesApiResponse);
+
+        // ページトークンがある場合は追加
+        if (nextPageToken) {
+          url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${nextPageToken}&key=${GOOGLE_MAPS_API_KEY}`;
+          // ページトークン使用時は2秒待機（Google API要件）
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+            console.error(`Google Places API error for ${searchType}:`, data.status, data.error_message);
+            break;
+          }
+
+          // レストランデータを追加
+          if (data.results && data.results.length > 0) {
+            const restaurants: Restaurant[] = data.results.map((place: any) => ({
+              id: place.place_id || place.id,
+              name: place.name,
+              rating: place.rating,
+              address: place.formatted_address || place.vicinity,
+              vicinity: place.vicinity,
+              place_id: place.place_id,
+              geometry: place.geometry,
+              types: place.types,
+              opening_hours: place.opening_hours,
+              price_level: place.price_level
+            }));
+            typeRestaurants.push(...restaurants);
+          }
+
+          // 次のページトークンを設定
+          nextPageToken = data.next_page_token;
+          pageCount++;
+
+          console.log(`${searchType} - Page ${pageCount}: ${data.results?.length || 0} restaurants found`);
+
+        } catch (error) {
+          console.error(`Error fetching ${searchType}:`, error);
+          break;
+        }
+
+      } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE && allRestaurants.length + typeRestaurants.length < MAX_TOTAL_PAGES * 20);
+
+      return typeRestaurants;
+    });
+
+    // すべての検索を並列で実行（ただし最大3つまで同時実行）
+    const batchSize = 3;
+    for (let i = 0; i < searchPromises.length; i += batchSize) {
+      const batch = searchPromises.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch);
+      batchResults.forEach(results => allRestaurants.push(...results));
+      
+      // タイムアウトチェック
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.log('Overall timeout reached, returning current results');
+        break;
       }
-
-      // レストランデータを追加
-      if (data.results && data.results.length > 0) {
-        const restaurants: Restaurant[] = data.results.map((place: any) => ({
-          id: place.place_id || place.id,
-          name: place.name,
-          rating: place.rating,
-          address: place.formatted_address || place.vicinity,
-          vicinity: place.vicinity,
-          place_id: place.place_id,
-          geometry: place.geometry,
-          types: place.types,
-          opening_hours: place.opening_hours,
-          price_level: place.price_level
-        }));
-        allRestaurants.push(...restaurants);
-      }
-
-      // 次のページトークンを設定
-      nextPageToken = data.next_page_token;
-      pageCount++;
-
-      console.log(`Page ${pageCount}: ${data.results?.length || 0} restaurants found, total: ${allRestaurants.length}`);
-
-    } while (nextPageToken && pageCount < maxPages);
     }
 
     // 重複を除去（同じplace_idを持つレストランを削除）

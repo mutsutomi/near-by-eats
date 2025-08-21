@@ -97,27 +97,35 @@ export async function POST(request: NextRequest) {
 
     const allRestaurants: Restaurant[] = [];
     
-    // 検索するタイプを決定
-    let searchTypes: string[];
+    // 効率的な順次検索戦略を決定
+    let searchStrategies: Array<{type: string, keyword?: string, priority: number}> = [];
     
     if (genres && genres.length > 0) {
-      // ジャンルが指定されている場合、検索可能なタイプのみを使用
-      const searchableGenres = genres.filter(isSearchableType);
-      if (searchableGenres.length > 0) {
-        searchTypes = searchableGenres;
+      // ラーメン特別対応
+      if (genres.includes('ramen_restaurant')) {
+        searchStrategies = [
+          { type: 'restaurant', keyword: 'ラーメン', priority: 1 },
+          { type: 'japanese_restaurant', keyword: 'ラーメン', priority: 2 }
+        ];
       } else {
-        // 指定されたジャンルに検索可能なものがない場合は、全タイプで検索してレスポンスでフィルタ
-        searchTypes = getSearchableTypes();
+        // 他のジャンル検索
+        const searchableGenres = genres.filter(isSearchableType).filter(g => g !== 'ramen_restaurant');
+        searchStrategies = searchableGenres.map(searchType => ({ type: searchType, priority: 1 }));
+        
+        if (searchStrategies.length === 0) {
+          // 検索可能なジャンルがない場合は全タイプで検索
+          searchStrategies = getSearchableTypes().filter(t => t !== 'ramen_restaurant').map(t => ({ type: t, priority: 1 }));
+        }
       }
     } else if (includeAllTypes) {
       // 全タイプ検索
-      searchTypes = getSearchableTypes();
+      searchStrategies = getSearchableTypes().filter(t => t !== 'ramen_restaurant').map(t => ({ type: t, priority: 1 }));
     } else {
       // デフォルト検索
-      searchTypes = [type];
+      searchStrategies = [{ type: type, priority: 1 }];
     }
     
-    console.log(`Search types: [${searchTypes.join(', ')}], filter genres: [${genres?.join(', ') || 'none'}]`);
+    console.log(`Search strategies: ${searchStrategies.map(s => `${s.type}${s.keyword ? `+${s.keyword}` : ''}`).join(', ')}, filter genres: [${genres?.join(', ') || 'none'}]`);
 
     // パフォーマンス改善のための設定
     const MAX_TOTAL_PAGES = 5; // 全体での最大ページ数
@@ -125,14 +133,21 @@ export async function POST(request: NextRequest) {
     const TIMEOUT_MS = 25000; // 25秒のタイムアウト
     const startTime = Date.now();
 
-    // Promise.allを使用して並列処理を行う
-    const searchPromises = searchTypes.map(async (searchType) => {
+    // 順次検索による効率的な検索実行
+    for (const strategy of searchStrategies.sort((a, b) => a.priority - b.priority)) {
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.log('Overall timeout reached, returning current results');
+        break;
+      }
+
       let nextPageToken: string | undefined;
       let pageCount = 0;
-      const typeRestaurants: Restaurant[] = [];
+      const { type: searchType, keyword } = strategy;
       
       // 最初のリクエスト
-      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${searchType}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
+      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${searchType}&language=${language}${keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''}&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      console.log(`Searching with type: ${searchType}${keyword ? `, keyword: ${keyword}` : ''}`);
     
       do {
         // タイムアウトチェック
@@ -171,35 +186,31 @@ export async function POST(request: NextRequest) {
               opening_hours: place.opening_hours,
               price_level: place.price_level
             }));
-            typeRestaurants.push(...restaurants);
+            allRestaurants.push(...restaurants);
           }
 
           // 次のページトークンを設定
           nextPageToken = data.next_page_token;
           pageCount++;
 
-          console.log(`${searchType} - Page ${pageCount}: ${data.results?.length || 0} restaurants found`);
+          console.log(`${searchType}${keyword ? `+${keyword}` : ''} - Page ${pageCount}: ${data.results?.length || 0} restaurants found, total: ${allRestaurants.length}`);
 
         } catch (error) {
           console.error(`Error fetching ${searchType}:`, error);
           break;
         }
 
-      } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE && allRestaurants.length + typeRestaurants.length < MAX_TOTAL_PAGES * 20);
+      } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE);
 
-      return typeRestaurants;
-    });
-
-    // すべての検索を並列で実行（ただし最大3つまで同時実行）
-    const batchSize = 3;
-    for (let i = 0; i < searchPromises.length; i += batchSize) {
-      const batch = searchPromises.slice(i, i + batchSize);
-      const batchResults = await Promise.all(batch);
-      batchResults.forEach(results => allRestaurants.push(...results));
+      // ラーメン検索の場合、最初の検索で結果が得られたら第2段階をスキップ
+      if (strategy.keyword === 'ラーメン' && strategy.priority === 1 && allRestaurants.length >= 10) {
+        console.log('Sufficient ramen results found, skipping additional searches');
+        break;
+      }
       
-      // タイムアウトチェック
-      if (Date.now() - startTime > TIMEOUT_MS) {
-        console.log('Overall timeout reached, returning current results');
+      // 全体での制限チェック
+      if (allRestaurants.length >= MAX_TOTAL_PAGES * 20) {
+        console.log('Maximum total results reached');
         break;
       }
     }

@@ -5,6 +5,50 @@ import { getSearchableTypes, isSearchableType } from '@/utils/genre';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
+// ジャンル別検索戦略の定義
+const GENRE_SEARCH_STRATEGIES: Record<string, Array<{method: 'nearby' | 'text', type?: string, keyword?: string, query?: string, priority: number}>> = {
+  ramen_restaurant: [
+    { method: 'nearby', type: 'restaurant', keyword: 'ramen', priority: 1 },
+    { method: 'text', query: 'ramen restaurants', priority: 2 },
+    { method: 'nearby', type: 'japanese_restaurant', keyword: 'ramen', priority: 3 },
+    { method: 'nearby', type: 'restaurant', keyword: 'ラーメン', priority: 4 }
+  ],
+  sushi_restaurant: [
+    { method: 'nearby', type: 'restaurant', keyword: 'sushi', priority: 1 },
+    { method: 'text', query: 'sushi restaurants', priority: 2 },
+    { method: 'nearby', type: 'japanese_restaurant', keyword: '寿司', priority: 3 }
+  ],
+  pizza_restaurant: [
+    { method: 'nearby', type: 'restaurant', keyword: 'pizza', priority: 1 },
+    { method: 'text', query: 'pizza restaurants', priority: 2 }
+  ],
+  chinese_restaurant: [
+    { method: 'nearby', type: 'chinese_restaurant', priority: 1 },
+    { method: 'nearby', type: 'restaurant', keyword: 'chinese', priority: 2 },
+    { method: 'text', query: 'chinese restaurants', priority: 3 }
+  ],
+  italian_restaurant: [
+    { method: 'nearby', type: 'italian_restaurant', priority: 1 },
+    { method: 'nearby', type: 'restaurant', keyword: 'italian', priority: 2 },
+    { method: 'text', query: 'italian restaurants', priority: 3 }
+  ]
+};
+
+// Text SearchとNearby Searchを統合した検索関数
+async function executeSearch(strategy: {method: 'nearby' | 'text', type?: string, keyword?: string, query?: string}, 
+                            latitude: number, longitude: number, radius: number, language: string): Promise<any> {
+  if (strategy.method === 'text') {
+    const query = `${strategy.query} near ${latitude},${longitude}`;
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latitude},${longitude}&radius=${radius}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`Text Search: ${query}`);
+    return fetch(url);
+  } else {
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${strategy.type}&language=${language}${strategy.keyword ? `&keyword=${encodeURIComponent(strategy.keyword)}` : ''}&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`Nearby Search: type=${strategy.type}${strategy.keyword ? `, keyword=${strategy.keyword}` : ''}`);
+    return fetch(url);
+  }
+}
+
 const DEMO_RESTAURANTS: Restaurant[] = [
   {
     id: 'demo-1',
@@ -125,40 +169,52 @@ export async function POST(request: NextRequest) {
 
     const allRestaurants: Restaurant[] = [];
     
-    // 効率的な順次検索戦略を決定
-    let searchStrategies: Array<{type: string, keyword?: string, priority: number}> = [];
+    // ハイブリッド検索戦略を決定
+    let searchStrategies: Array<{method: 'nearby' | 'text', type?: string, keyword?: string, query?: string, priority: number}> = [];
     
     if (genres && genres.length > 0) {
       console.log(`Processing genres: [${genres.join(', ')}]`);
       
-      // ラーメン特別対応：英語キーワード優先の多段階検索
-      if (genres.includes('ramen_restaurant')) {
-        console.log('Ramen restaurant genre detected, using comprehensive ramen search strategy');
-        searchStrategies = [
-          { type: 'restaurant', keyword: 'ramen', priority: 1 },
-          { type: 'restaurant', keyword: 'noodle', priority: 2 },
-          { type: 'japanese_restaurant', keyword: 'ramen', priority: 3 },
-          { type: 'restaurant', keyword: 'ラーメン', priority: 4 }
-        ];
-      } else {
-        // 他のジャンル検索
-        const searchableGenres = genres.filter(isSearchableType).filter(g => g !== 'ramen_restaurant');
-        searchStrategies = searchableGenres.map(searchType => ({ type: searchType, priority: 1 }));
-        
-        if (searchStrategies.length === 0) {
-          // 検索可能なジャンルがない場合は全タイプで検索
-          searchStrategies = getSearchableTypes().filter(t => t !== 'ramen_restaurant').map(t => ({ type: t, priority: 1 }));
+      // ジャンル別の専用戦略を使用
+      for (const genre of genres) {
+        if (GENRE_SEARCH_STRATEGIES[genre]) {
+          console.log(`Using specialized strategies for ${genre}`);
+          searchStrategies.push(...GENRE_SEARCH_STRATEGIES[genre]);
+        } else if (isSearchableType(genre)) {
+          // 通常のtype検索
+          console.log(`Using standard type search for ${genre}`);
+          searchStrategies.push({ method: 'nearby', type: genre, priority: 1 });
+        } else {
+          // フリーワード検索
+          console.log(`Using freeword search for ${genre}`);
+          const genreName = genre.replace('_restaurant', '').replace('_', ' ');
+          searchStrategies.push(
+            { method: 'nearby', type: 'restaurant', keyword: genreName, priority: 1 },
+            { method: 'text', query: `${genreName} restaurants`, priority: 2 }
+          );
         }
       }
     } else if (includeAllTypes) {
       // 全タイプ検索
-      searchStrategies = getSearchableTypes().filter(t => t !== 'ramen_restaurant').map(t => ({ type: t, priority: 1 }));
+      searchStrategies = getSearchableTypes().map(t => ({ method: 'nearby', type: t, priority: 1 }));
     } else {
       // デフォルト検索
-      searchStrategies = [{ type: type, priority: 1 }];
+      searchStrategies = [{ method: 'nearby', type: type, priority: 1 }];
     }
     
-    console.log(`Search strategies: ${searchStrategies.map(s => `${s.type}${s.keyword ? `+${s.keyword}` : ''}`).join(', ')}, filter genres: [${genres?.join(', ') || 'none'}]`);
+    // 優先度でソートし、重複を除去
+    searchStrategies = searchStrategies
+      .sort((a, b) => a.priority - b.priority)
+      .filter((strategy, index, self) => 
+        index === self.findIndex(s => 
+          s.method === strategy.method && 
+          s.type === strategy.type && 
+          s.keyword === strategy.keyword && 
+          s.query === strategy.query
+        )
+      );
+    
+    console.log(`Search strategies: ${searchStrategies.length} strategies planned, filter genres: [${genres?.join(', ') || 'none'}]`);
 
     // パフォーマンス改善のための設定
     const MAX_TOTAL_PAGES = 5; // 全体での最大ページ数
@@ -166,8 +222,8 @@ export async function POST(request: NextRequest) {
     const TIMEOUT_MS = 25000; // 25秒のタイムアウト
     const startTime = Date.now();
 
-    // 順次検索による効率的な検索実行
-    for (const strategy of searchStrategies.sort((a, b) => a.priority - b.priority)) {
+    // ハイブリッド検索の実行
+    for (const strategy of searchStrategies) {
       if (Date.now() - startTime > TIMEOUT_MS) {
         console.log('Overall timeout reached, returning current results');
         break;
@@ -175,32 +231,37 @@ export async function POST(request: NextRequest) {
 
       let nextPageToken: string | undefined;
       let pageCount = 0;
-      const { type: searchType, keyword } = strategy;
+      const strategyDescription = strategy.method === 'text' 
+        ? `Text: ${strategy.query}` 
+        : `Nearby: ${strategy.type}${strategy.keyword ? `+${strategy.keyword}` : ''}`;
       
-      // 最初のリクエスト
-      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${searchType}&language=${language}${keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''}&key=${GOOGLE_MAPS_API_KEY}`;
-      
-      console.log(`Searching with type: ${searchType}${keyword ? `, keyword: ${keyword}` : ''}`);
+      console.log(`Executing strategy: ${strategyDescription}`);
     
       do {
         // タイムアウトチェック
         if (Date.now() - startTime > TIMEOUT_MS) {
-          console.log(`Timeout reached for search type: ${searchType}`);
+          console.log(`Timeout reached for strategy: ${strategyDescription}`);
           break;
         }
 
-        // ページトークンがある場合は追加
-        if (nextPageToken) {
-          url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${nextPageToken}&key=${GOOGLE_MAPS_API_KEY}`;
-          // ページトークン使用時は2秒待機（Google API要件）
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-
         try {
-          const response = await fetch(url);
+          let response;
+          
+          // ページトークンがある場合（Nearby Searchのみ）
+          if (nextPageToken && strategy.method === 'nearby') {
+            const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${nextPageToken}&key=${GOOGLE_MAPS_API_KEY}`;
+            console.log('Using page token for nearby search');
+            // ページトークン使用時は2秒待機（Google API要件）
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            response = await fetch(url);
+          } else {
+            // 最初のリクエストまたはText Search
+            response = await executeSearch(strategy, latitude, longitude, radius, language);
+          }
+
           const data = await response.json();
 
-          console.log(`API Response for ${searchType}${keyword ? `+${keyword}` : ''}:`, {
+          console.log(`API Response for ${strategyDescription}:`, {
             status: data.status,
             resultsCount: data.results?.length || 0,
             error_message: data.error_message,
@@ -208,13 +269,13 @@ export async function POST(request: NextRequest) {
           });
 
           if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-            console.error(`Google Places API error for ${searchType}:`, data.status, data.error_message);
-            break;
+            console.error(`Google Places API error for ${strategyDescription}:`, data.status, data.error_message);
+            break; // この戦略を終了して次へ
           }
 
           // レストランデータを追加
           if (data.results && data.results.length > 0) {
-            console.log(`Sample results for ${searchType}${keyword ? `+${keyword}` : ''}:`, 
+            console.log(`Sample results for ${strategyDescription}:`, 
               data.results.slice(0, 3).map((place: any) => ({
                 name: place.name,
                 types: place.types,
@@ -235,26 +296,31 @@ export async function POST(request: NextRequest) {
               price_level: place.price_level
             }));
             allRestaurants.push(...restaurants);
+            
+            console.log(`${strategyDescription} - Page ${pageCount + 1}: ${data.results.length} restaurants added, total: ${allRestaurants.length}`);
           } else {
-            console.log(`No results found for ${searchType}${keyword ? `+${keyword}` : ''}`);
+            console.log(`No results found for ${strategyDescription}`);
           }
 
-          // 次のページトークンを設定
+          // Text SearchはページネーションサポートしないのでText Searchの場合は1回で終了
+          if (strategy.method === 'text') {
+            break;
+          }
+
+          // 次のページトークンを設定（Nearby Searchのみ）
           nextPageToken = data.next_page_token;
           pageCount++;
 
-          console.log(`${searchType}${keyword ? `+${keyword}` : ''} - Page ${pageCount}: ${data.results?.length || 0} restaurants found, total: ${allRestaurants.length}`);
-
         } catch (error) {
-          console.error(`Error fetching ${searchType}:`, error);
-          break;
+          console.error(`Error executing strategy ${strategyDescription}:`, error);
+          break; // この戦略を終了して次へ
         }
 
-      } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE);
+      } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE && strategy.method === 'nearby');
 
-      // ラーメン検索の場合、十分な結果が得られたら追加検索をスキップ
-      if ((strategy.keyword === 'ramen' || strategy.keyword === 'ラーメン') && allRestaurants.length >= 10) {
-        console.log('Sufficient ramen results found, skipping additional searches');
+      // 十分な結果が得られた場合は早期終了
+      if (allRestaurants.length >= 20) {
+        console.log(`Sufficient results found (${allRestaurants.length}), skipping remaining strategies`);
         break;
       }
       

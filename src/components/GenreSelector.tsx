@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getAllGenres } from '@/utils/genre';
+import { getAllGenres, isSearchableType } from '@/utils/genre';
 
 interface GenreSelectorProps {
   selectedGenres: string[];
@@ -93,29 +93,37 @@ const GenreSelector = ({
             {Object.entries(allGenres).map(([genreType, genreName]) => {
               const isSelected = selectedGenres.includes(genreType);
               const isDisabled = Boolean(maxSelections && !isSelected && selectedGenres.length >= maxSelections);
+              const canDirectSearch = isSearchableType(genreType);
               
               return (
                 <button
                   key={genreType}
                   onClick={() => !isDisabled && handleGenreToggle(genreType)}
                   disabled={isDisabled}
-                  className={`text-sm px-3 py-2 rounded-lg border transition-all duration-200 text-left ${
+                  className={`text-sm px-3 py-2 rounded-lg border transition-all duration-200 text-left relative ${
                     isSelected
                       ? 'bg-blue-600 text-white border-blue-600 font-medium shadow-sm'
                       : isDisabled
                       ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                       : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
                   }`}
+                  title={canDirectSearch ? '直接検索可能' : '検索結果からフィルタリング'}
                 >
-                  {genreName}
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{genreName}</span>
+                    {!canDirectSearch && (
+                      <span className="text-xs opacity-60 ml-1">★</span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
           {selectedGenres.length === 0 && (
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              気になるジャンルを選択してください（複数選択可）
-            </p>
+            <div className="text-xs text-gray-500 mt-2 space-y-1">
+              <p className="text-center">気になるジャンルを選択してください（複数選択可）</p>
+              <p className="text-center">★付きは検索結果からフィルタリングされます</p>
+            </div>
           )}
         </div>
       </div>

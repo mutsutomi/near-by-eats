@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PlacesApiRequest, PlacesApiResponse, Restaurant } from '@/types';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { getSearchableTypes, isSearchableType } from '@/utils/genre';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
@@ -99,10 +100,27 @@ export async function POST(request: NextRequest) {
     let pageCount = 0;
     const maxPages = 3; // 最大3ページ（60件）まで取得
 
-    // より多くの飲食店を取得するため、複数のタイプで検索する場合
-    const searchTypes = includeAllTypes 
-      ? ['restaurant', 'food', 'cafe', 'bar', 'meal_takeaway'] 
-      : [type];
+    // 検索するタイプを決定
+    let searchTypes: string[];
+    
+    if (genres && genres.length > 0) {
+      // ジャンルが指定されている場合、検索可能なタイプのみを使用
+      const searchableGenres = genres.filter(isSearchableType);
+      if (searchableGenres.length > 0) {
+        searchTypes = searchableGenres;
+      } else {
+        // 指定されたジャンルに検索可能なものがない場合は、全タイプで検索してレスポンスでフィルタ
+        searchTypes = getSearchableTypes();
+      }
+    } else if (includeAllTypes) {
+      // 全タイプ検索
+      searchTypes = getSearchableTypes();
+    } else {
+      // デフォルト検索
+      searchTypes = [type];
+    }
+    
+    console.log(`Search types: [${searchTypes.join(', ')}], filter genres: [${genres?.join(', ') || 'none'}]`);
 
     // 各タイプで検索を実行
     for (const searchType of searchTypes) {
@@ -167,13 +185,13 @@ export async function POST(request: NextRequest) {
       index === self.findIndex((r) => r.place_id === restaurant.place_id)
     );
 
-    // ジャンルフィルタリングを適用
+    // ジャンルフィルタリングを適用（検索可能でないジャンルも含めて後フィルタ）
     let filteredRestaurants = uniqueRestaurants;
     if (genres && genres.length > 0) {
       filteredRestaurants = uniqueRestaurants.filter(restaurant =>
-        restaurant.types && restaurant.types.some(type => genres.includes(type))
+        restaurant.types && restaurant.types.some(restaurantType => genres.includes(restaurantType))
       );
-      console.log(`Filtered by genres [${genres.join(', ')}]: ${filteredRestaurants.length} restaurants`);
+      console.log(`Filtered by genres [${genres.join(', ')}]: ${filteredRestaurants.length} restaurants from ${uniqueRestaurants.length} total`);
     }
 
     console.log(`Total unique restaurants found: ${uniqueRestaurants.length}, after genre filtering: ${filteredRestaurants.length}`);

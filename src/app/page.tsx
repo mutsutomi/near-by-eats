@@ -162,7 +162,7 @@ export default function Home() {
     switch (searchState) {
       case 'idle':
         return (
-          <div className="bg-white rounded-lg p-8 shadow-lg max-w-md w-full">
+          <div className="bg-white rounded-lg p-8 shadow-lg max-w-lg w-full">
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,19 +197,14 @@ export default function Home() {
             </div>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                ジャンル（最大3つ）
+                ジャンル（複数選択可）
               </label>
               <GenreSelector
                 selectedGenres={selectedGenres}
                 onGenreChange={setSelectedGenres}
-                maxSelections={3}
+                variant="pills"
                 className="w-full"
               />
-              {selectedGenres.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  選択中: {getDisplayGenres(selectedGenres).join('、')}
-                </p>
-              )}
             </div>
             <LocationButton
               onLocationSuccess={handleLocationSuccess}
@@ -261,7 +256,6 @@ export default function Home() {
                   <GenreSelector
                     selectedGenres={genreFilter}
                     onGenreChange={setGenreFilter}
-                    maxSelections={5}
                     className="min-w-[180px]"
                   />
                 </div>

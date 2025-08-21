@@ -6,13 +6,17 @@ interface GenreSelectorProps {
   onGenreChange: (genres: string[]) => void;
   maxSelections?: number;
   className?: string;
+  variant?: 'dropdown' | 'pills';
+  placeholder?: string;
 }
 
 const GenreSelector = ({ 
   selectedGenres, 
   onGenreChange, 
-  maxSelections = 3,
-  className = ''
+  maxSelections,
+  className = '',
+  variant = 'dropdown',
+  placeholder = 'ジャンルを選択'
 }: GenreSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const allGenres = getAllGenres();
@@ -23,7 +27,7 @@ const GenreSelector = ({
     if (isSelected) {
       onGenreChange(selectedGenres.filter(g => g !== genreType));
     } else {
-      if (selectedGenres.length < maxSelections) {
+      if (!maxSelections || selectedGenres.length < maxSelections) {
         onGenreChange([...selectedGenres, genreType]);
       }
     }
@@ -35,7 +39,7 @@ const GenreSelector = ({
 
   const getDisplayText = () => {
     if (selectedGenres.length === 0) {
-      return 'ジャンルを選択';
+      return placeholder;
     }
     if (selectedGenres.length === 1) {
       return allGenres[selectedGenres[0]] || selectedGenres[0];
@@ -43,6 +47,82 @@ const GenreSelector = ({
     return `${selectedGenres.length}個のジャンル`;
   };
 
+  // Pills variant for search form
+  if (variant === 'pills') {
+    return (
+      <div className={`${className}`}>
+        {/* Selected genres display */}
+        {selectedGenres.length > 0 && (
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-2">
+              {selectedGenres.map(genreType => (
+                <span
+                  key={genreType}
+                  className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full font-medium"
+                >
+                  {allGenres[genreType]}
+                  <button
+                    onClick={() => handleGenreToggle(genreType)}
+                    className="text-blue-600 hover:text-blue-800 ml-1 w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors"
+                    aria-label={`${allGenres[genreType]}を削除`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Genre selection grid */}
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-700">
+              ジャンルを選択 {selectedGenres.length > 0 && `(${selectedGenres.length}個選択中)`}
+            </h4>
+            {selectedGenres.length > 0 && (
+              <button
+                onClick={clearSelection}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+              >
+                すべてクリア
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+            {Object.entries(allGenres).map(([genreType, genreName]) => {
+              const isSelected = selectedGenres.includes(genreType);
+              const isDisabled = Boolean(maxSelections && !isSelected && selectedGenres.length >= maxSelections);
+              
+              return (
+                <button
+                  key={genreType}
+                  onClick={() => !isDisabled && handleGenreToggle(genreType)}
+                  disabled={isDisabled}
+                  className={`text-sm px-3 py-2 rounded-lg border transition-all duration-200 text-left ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 font-medium shadow-sm'
+                      : isDisabled
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
+                  }`}
+                >
+                  {genreName}
+                </button>
+              );
+            })}
+          </div>
+          {selectedGenres.length === 0 && (
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              気になるジャンルを選択してください（複数選択可）
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Dropdown variant (default)
   return (
     <div className={`relative ${className}`}>
       <button
@@ -74,7 +154,7 @@ const GenreSelector = ({
             <div className="p-3 border-b border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  ジャンル選択 ({selectedGenres.length}/{maxSelections})
+                  ジャンル選択 {maxSelections ? `(${selectedGenres.length}/${maxSelections})` : `(${selectedGenres.length})`}
                 </span>
                 {selectedGenres.length > 0 && (
                   <button
@@ -108,7 +188,7 @@ const GenreSelector = ({
             <div className="p-2">
               {Object.entries(allGenres).map(([genreType, genreName]) => {
                 const isSelected = selectedGenres.includes(genreType);
-                const isDisabled = !isSelected && selectedGenres.length >= maxSelections;
+                const isDisabled = Boolean(maxSelections && !isSelected && selectedGenres.length >= maxSelections);
                 
                 return (
                   <button

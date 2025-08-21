@@ -122,7 +122,9 @@ describe('Home Page Integration Tests', () => {
             longitude: 139.6503,
             radius: 1500,
             type: 'restaurant',
-            language: 'ja'
+            language: 'ja',
+            includeAllTypes: true,
+            genres: []
           }),
         })
       })

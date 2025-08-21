@@ -25,6 +25,7 @@ export interface PlacesApiRequest {
   type?: string;
   language?: string;
   includeAllTypes?: boolean; // 全ての飲食関連タイプを含めるかどうか
+  genres?: string[]; // 選択されたジャンルのタイプ配列
 }
 
 export interface PlacesApiResponse {

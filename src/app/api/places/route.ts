@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: PlacesApiRequest = await request.json();
-    const { latitude, longitude, radius = 1500, type = 'restaurant', language = 'ja', includeAllTypes = false } = body;
+    const { latitude, longitude, radius = 1500, type = 'restaurant', language = 'ja', includeAllTypes = false, genres = [] } = body;
 
     if (!latitude || !longitude) {
       return NextResponse.json(
@@ -167,10 +167,19 @@ export async function POST(request: NextRequest) {
       index === self.findIndex((r) => r.place_id === restaurant.place_id)
     );
 
-    console.log(`Total unique restaurants found: ${uniqueRestaurants.length}`);
+    // ジャンルフィルタリングを適用
+    let filteredRestaurants = uniqueRestaurants;
+    if (genres && genres.length > 0) {
+      filteredRestaurants = uniqueRestaurants.filter(restaurant =>
+        restaurant.types && restaurant.types.some(type => genres.includes(type))
+      );
+      console.log(`Filtered by genres [${genres.join(', ')}]: ${filteredRestaurants.length} restaurants`);
+    }
+
+    console.log(`Total unique restaurants found: ${uniqueRestaurants.length}, after genre filtering: ${filteredRestaurants.length}`);
 
     return NextResponse.json({
-      restaurants: uniqueRestaurants,
+      restaurants: filteredRestaurants,
       status: 'OK'
     } as PlacesApiResponse);
 

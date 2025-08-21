@@ -3,8 +3,10 @@
 import { useState, useMemo } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
+import GenreSelector from '@/components/GenreSelector';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
 import { calculateDistance } from '@/utils/distance';
+import { getDisplayGenres } from '@/utils/genre';
 
 type SearchState = 'idle' | 'getting-location' | 'searching' | 'success' | 'error';
 
@@ -17,6 +19,8 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [searchRadius, setSearchRadius] = useState<number>(1500);
   const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [genreFilter, setGenreFilter] = useState<string[]>([]);
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
@@ -34,7 +38,9 @@ export default function Home() {
           longitude,
           radius: searchRadius,
           type: 'restaurant',
-          language: 'ja'
+          language: 'ja',
+          includeAllTypes: selectedGenres.length === 0,
+          genres: selectedGenres
         }),
       });
 
@@ -102,20 +108,30 @@ export default function Home() {
     setError('');
     setRestaurants([]);
     setUserLocation(null);
+    setSelectedGenres([]);
+    setGenreFilter([]);
+    setSortOption('default');
   };
 
-  const sortedRestaurants = useMemo(() => {
+  const sortedAndFilteredRestaurants = useMemo(() => {
     if (!restaurants.length) return [];
     
-    const sorted = [...restaurants];
+    // まずジャンルフィルタリングを適用
+    let filtered = [...restaurants];
+    if (genreFilter.length > 0) {
+      filtered = restaurants.filter(restaurant =>
+        restaurant.types && restaurant.types.some(type => genreFilter.includes(type))
+      );
+    }
     
+    // 次にソートを適用
     switch (sortOption) {
       case 'rating':
-        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
       
       case 'distance':
-        if (!userLocation) return sorted;
-        return sorted.sort((a, b) => {
+        if (!userLocation) return filtered;
+        return filtered.sort((a, b) => {
           const distA = a.geometry?.location ? calculateDistance(
             userLocation.latitude,
             userLocation.longitude,
@@ -132,15 +148,15 @@ export default function Home() {
         });
       
       case 'price-low':
-        return sorted.sort((a, b) => (a.price_level || 0) - (b.price_level || 0));
+        return filtered.sort((a, b) => (a.price_level || 0) - (b.price_level || 0));
       
       case 'price-high':
-        return sorted.sort((a, b) => (b.price_level || 0) - (a.price_level || 0));
+        return filtered.sort((a, b) => (b.price_level || 0) - (a.price_level || 0));
       
       default:
-        return sorted;
+        return filtered;
     }
-  }, [restaurants, sortOption, userLocation]);
+  }, [restaurants, sortOption, userLocation, genreFilter]);
 
   const renderContent = () => {
     switch (searchState) {
@@ -179,6 +195,22 @@ export default function Home() {
                 <span>5km</span>
               </div>
             </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ジャンル（最大3つ）
+              </label>
+              <GenreSelector
+                selectedGenres={selectedGenres}
+                onGenreChange={setSelectedGenres}
+                maxSelections={3}
+                className="w-full"
+              />
+              {selectedGenres.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  選択中: {getDisplayGenres(selectedGenres).join('、')}
+                </p>
+              )}
+            </div>
             <LocationButton
               onLocationSuccess={handleLocationSuccess}
               onLocationError={handleLocationError}
@@ -205,14 +237,15 @@ export default function Home() {
           <div className="w-full max-w-6xl">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                近くのレストラン ({restaurants.length}件)
+                近くのレストラン ({sortedAndFilteredRestaurants.length}件
+                {genreFilter.length > 0 && ` / ${restaurants.length}件中`})
               </h2>
               <p className="text-gray-600">
                 現在地から{searchRadius / 1000}km以内のレストラン
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-4">
               <button
                 onClick={handleRetry}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
@@ -220,35 +253,49 @@ export default function Home() {
                 再検索
               </button>
               
-              <div className="relative flex items-center gap-2">
-                <label htmlFor="sort" className="text-sm font-medium text-gray-700">
-                  並び替え:
-                </label>
-                <div className="relative">
-                  <select
-                    id="sort"
-                    value={sortOption}
-                    onChange={(e) => setSortOption(e.target.value as SortOption)}
-                    className="px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium appearance-none cursor-pointer"
-                    style={{ minWidth: '180px' }}
-                  >
-                    <option value="default" className="text-gray-700">デフォルト</option>
-                    <option value="rating" className="text-gray-700">評価が高い順</option>
-                    <option value="distance" className="text-gray-700">距離が近い順</option>
-                    <option value="price-low" className="text-gray-700">価格が安い順</option>
-                    <option value="price-high" className="text-gray-700">価格が高い順</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="genre-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    ジャンル:
+                  </label>
+                  <GenreSelector
+                    selectedGenres={genreFilter}
+                    onGenreChange={setGenreFilter}
+                    maxSelections={5}
+                    className="min-w-[180px]"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    並び替え:
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="sort"
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value as SortOption)}
+                      className="px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium appearance-none cursor-pointer"
+                      style={{ minWidth: '180px' }}
+                    >
+                      <option value="default" className="text-gray-700">デフォルト</option>
+                      <option value="rating" className="text-gray-700">評価が高い順</option>
+                      <option value="distance" className="text-gray-700">距離が近い順</option>
+                      <option value="price-low" className="text-gray-700">価格が安い順</option>
+                      <option value="price-high" className="text-gray-700">価格が高い順</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedRestaurants.map((restaurant) => (
+              {sortedAndFilteredRestaurants.map((restaurant) => (
                 <RestaurantCard 
                   key={restaurant.id} 
                   restaurant={restaurant}

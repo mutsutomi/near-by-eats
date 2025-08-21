@@ -22,10 +22,8 @@ export interface PlacesApiRequest {
   latitude: number;
   longitude: number;
   radius?: number;
-  type?: string;
   language?: string;
-  includeAllTypes?: boolean; // 全ての飲食関連タイプを含めるかどうか
-  genres?: string[]; // 選択されたジャンルのタイプ配列
+  query?: string; // フリーワード検索クエリ
 }
 
 export interface PlacesApiResponse {

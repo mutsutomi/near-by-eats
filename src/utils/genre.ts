@@ -15,6 +15,7 @@ const GENRE_MAPPING: Record<string, string> = {
   chinese_restaurant: '中華料理',
   italian_restaurant: 'イタリア料理',
   japanese_restaurant: '和食',
+  asian_restaurant: 'アジア料理',
   indian_restaurant: 'インド料理',
   thai_restaurant: 'タイ料理',
   french_restaurant: 'フランス料理',
@@ -67,6 +68,9 @@ const GENRE_MAPPING: Record<string, string> = {
 // Google Places APIのNearby Searchで検索可能なタイプ（実際にtypeパラメータとして使用可能）
 const SEARCHABLE_TYPES = [
   'restaurant',
+  'ramen_restaurant',
+  'japanese_restaurant',
+  'asian_restaurant',
   'cafe', 
   'bakery',
   'meal_delivery',

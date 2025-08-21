@@ -16,7 +16,7 @@ const DEMO_RESTAURANTS: Restaurant[] = [
     geometry: {
       location: { lat: 35.658584, lng: 139.701334 }
     },
-    types: ['restaurant', 'food'],
+    types: ['restaurant', 'food', 'japanese_restaurant'],
     opening_hours: { open_now: true },
     price_level: 2
   },
@@ -30,7 +30,7 @@ const DEMO_RESTAURANTS: Restaurant[] = [
     geometry: {
       location: { lat: 35.659584, lng: 139.702334 }
     },
-    types: ['restaurant', 'food'],
+    types: ['restaurant', 'food', 'italian_restaurant'],
     opening_hours: { open_now: true },
     price_level: 3
   },
@@ -46,6 +46,34 @@ const DEMO_RESTAURANTS: Restaurant[] = [
     },
     types: ['restaurant', 'food', 'cafe'],
     opening_hours: { open_now: false },
+    price_level: 1
+  },
+  {
+    id: 'demo-4',
+    name: 'ラーメン二郎 大崎店',
+    rating: 4.1,
+    address: '東京都品川区大崎3-6-15',
+    vicinity: '大崎',
+    place_id: 'demo-place-4',
+    geometry: {
+      location: { lat: 35.54659, lng: 139.52554 }
+    },
+    types: ['restaurant', 'food', 'ramen_restaurant', 'japanese_restaurant'],
+    opening_hours: { open_now: true },
+    price_level: 1
+  },
+  {
+    id: 'demo-5',
+    name: '横浜家系 大崎家',
+    rating: 3.9,
+    address: '東京都品川区大崎1-2-3',
+    vicinity: '大崎',
+    place_id: 'demo-place-5',
+    geometry: {
+      location: { lat: 35.54700, lng: 139.52600 }
+    },
+    types: ['restaurant', 'food', 'ramen_restaurant', 'japanese_restaurant'],
+    opening_hours: { open_now: true },
     price_level: 1
   }
 ];
@@ -101,11 +129,16 @@ export async function POST(request: NextRequest) {
     let searchStrategies: Array<{type: string, keyword?: string, priority: number}> = [];
     
     if (genres && genres.length > 0) {
-      // ラーメン特別対応
+      console.log(`Processing genres: [${genres.join(', ')}]`);
+      
+      // ラーメン特別対応：英語キーワード優先の多段階検索
       if (genres.includes('ramen_restaurant')) {
+        console.log('Ramen restaurant genre detected, using comprehensive ramen search strategy');
         searchStrategies = [
-          { type: 'restaurant', keyword: 'ラーメン', priority: 1 },
-          { type: 'japanese_restaurant', keyword: 'ラーメン', priority: 2 }
+          { type: 'restaurant', keyword: 'ramen', priority: 1 },
+          { type: 'restaurant', keyword: 'noodle', priority: 2 },
+          { type: 'japanese_restaurant', keyword: 'ramen', priority: 3 },
+          { type: 'restaurant', keyword: 'ラーメン', priority: 4 }
         ];
       } else {
         // 他のジャンル検索
@@ -167,6 +200,13 @@ export async function POST(request: NextRequest) {
           const response = await fetch(url);
           const data = await response.json();
 
+          console.log(`API Response for ${searchType}${keyword ? `+${keyword}` : ''}:`, {
+            status: data.status,
+            resultsCount: data.results?.length || 0,
+            error_message: data.error_message,
+            next_page_token: data.next_page_token ? 'present' : 'none'
+          });
+
           if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
             console.error(`Google Places API error for ${searchType}:`, data.status, data.error_message);
             break;
@@ -174,6 +214,14 @@ export async function POST(request: NextRequest) {
 
           // レストランデータを追加
           if (data.results && data.results.length > 0) {
+            console.log(`Sample results for ${searchType}${keyword ? `+${keyword}` : ''}:`, 
+              data.results.slice(0, 3).map((place: any) => ({
+                name: place.name,
+                types: place.types,
+                vicinity: place.vicinity
+              }))
+            );
+            
             const restaurants: Restaurant[] = data.results.map((place: any) => ({
               id: place.place_id || place.id,
               name: place.name,
@@ -187,6 +235,8 @@ export async function POST(request: NextRequest) {
               price_level: place.price_level
             }));
             allRestaurants.push(...restaurants);
+          } else {
+            console.log(`No results found for ${searchType}${keyword ? `+${keyword}` : ''}`);
           }
 
           // 次のページトークンを設定
@@ -202,8 +252,8 @@ export async function POST(request: NextRequest) {
 
       } while (nextPageToken && pageCount < MAX_PAGES_PER_TYPE);
 
-      // ラーメン検索の場合、最初の検索で結果が得られたら第2段階をスキップ
-      if (strategy.keyword === 'ラーメン' && strategy.priority === 1 && allRestaurants.length >= 10) {
+      // ラーメン検索の場合、十分な結果が得られたら追加検索をスキップ
+      if ((strategy.keyword === 'ramen' || strategy.keyword === 'ラーメン') && allRestaurants.length >= 10) {
         console.log('Sufficient ramen results found, skipping additional searches');
         break;
       }

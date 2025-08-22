@@ -59,13 +59,10 @@ describe('Home Page Integration Tests', () => {
       expect(screen.getByText('Near-by Eats')).toBeInTheDocument()
       expect(screen.getByText('現在地から近くのレストランを見つけます')).toBeInTheDocument()
 
-      // 初期状態のコンテンツ確認
-      expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
+      // 初期状態のコンテンツ確認（検索フォームは常に表示）
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
       
       // キーワード検索フィールドの確認
-      expect(screen.getByText('キーワード検索（ジャンル・料理名など）')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
     })
 
@@ -133,7 +130,6 @@ describe('Home Page Integration Tests', () => {
       // レストラン表示の確認
       await waitFor(() => {
         expect(screen.getByText('近くのレストラン (2件)')).toBeInTheDocument()
-        expect(screen.getByText('現在地から近くのレストラン')).toBeInTheDocument()
       })
 
       // 各レストランカードの表示確認
@@ -142,8 +138,8 @@ describe('Home Page Integration Tests', () => {
       expect(screen.getByText('東京都渋谷区テスト町1-1-1')).toBeInTheDocument()
       expect(screen.getByText('東京都新宿区テスト町2-2-2')).toBeInTheDocument()
 
-      // 再検索ボタンの表示確認
-      expect(screen.getByRole('button', { name: '再検索' })).toBeInTheDocument()
+      // 検索フォームが常に表示されていることを確認
+      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
     })
 
     it('レストランが0件の場合の処理', async () => {
@@ -183,7 +179,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('近くにレストランが見つかりませんでした')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
     })
   })
@@ -215,7 +211,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('位置情報の取得が拒否されました。ブラウザの設定で位置情報を許可してください。')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
     })
 
@@ -257,7 +253,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('APIエラー: APIエラーが発生しました')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
     })
 
@@ -290,7 +286,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('レストランの検索中にエラーが発生しました')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
 
       // console.errorが呼ばれることを確認
@@ -329,7 +325,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('レストランの検索中にエラーが発生しました')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
     })
 
@@ -361,12 +357,11 @@ describe('Home Page Integration Tests', () => {
       })
 
       // リトライボタンをクリック
-      const retryButton = screen.getByRole('button', { name: 'もう一度試す' })
+      const retryButton = screen.getByRole('button', { name: '再試行' })
       await userEvent.click(retryButton)
 
-      // 初期状態に戻ることを確認
-      expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
+      // 検索フォームが利用可能であることを確認
+      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
     })
 
@@ -407,13 +402,8 @@ describe('Home Page Integration Tests', () => {
         expect(screen.getByText('近くのレストラン (2件)')).toBeInTheDocument()
       })
 
-      // 再検索ボタンをクリック
-      const retryButton = screen.getByRole('button', { name: '再検索' })
-      await userEvent.click(retryButton)
-
-      // 初期状態に戻ることを確認
-      expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
+      // 検索フォームが常に利用可能であることを確認
+      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
     })
   })
@@ -556,7 +546,7 @@ describe('Home Page Integration Tests', () => {
       })
 
       // メインコンテナの最大幅確認
-      const mainContainer = screen.getByText('近くのレストラン (2件)').closest('.max-w-6xl')
+      const mainContainer = screen.getByText('近くのレストラン (2件)').closest('.max-w-4xl')
       expect(mainContainer).toBeInTheDocument()
     })
   })
@@ -568,10 +558,6 @@ describe('Home Page Integration Tests', () => {
       // h1要素の確認
       const mainHeading = screen.getByRole('heading', { level: 1 })
       expect(mainHeading).toHaveTextContent('Near-by Eats')
-
-      // h2要素の確認
-      const subHeading = screen.getByRole('heading', { level: 2 })
-      expect(subHeading).toHaveTextContent('レストランを検索')
     })
 
     it('ボタンに適切なaria-labelが設定されている', () => {
@@ -607,9 +593,9 @@ describe('Home Page Integration Tests', () => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
       })
 
-      // エラー状態でもh1とh2が存在することを確認
+      // エラー状態でもh1とh3が存在することを確認
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Near-by Eats')
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('エラーが発生しました')
+      expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('エラーが発生しました')
     })
 
     it('Google Places API REQUEST_DENIED エラーの処理', async () => {
@@ -650,7 +636,7 @@ describe('Home Page Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
         expect(screen.getByText('Google Places APIキーが無効です。管理者にお問い合わせください。')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'もう一度試す' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: '再試行' })).toBeInTheDocument()
       })
     })
   })

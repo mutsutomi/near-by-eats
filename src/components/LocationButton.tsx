@@ -7,9 +7,10 @@ interface LocationButtonProps {
   onLocationSuccess: (latitude: number, longitude: number) => void;
   onLocationError: (error: LocationError) => void;
   disabled?: boolean;
+  className?: string;
 }
 
-const LocationButton = ({ onLocationSuccess, onLocationError, disabled = false }: LocationButtonProps) => {
+const LocationButton = ({ onLocationSuccess, onLocationError, disabled = false, className = '' }: LocationButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const getCurrentLocation = () => {
@@ -74,6 +75,7 @@ const LocationButton = ({ onLocationSuccess, onLocationError, disabled = false }
           : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg'
         }
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        ${className}
       `}
       aria-label="現在地から近くのレストランを検索"
     >

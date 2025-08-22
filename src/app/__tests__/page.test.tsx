@@ -61,8 +61,12 @@ describe('Home Page Integration Tests', () => {
 
       // 初期状態のコンテンツ確認
       expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から1.5km以内の レストランを検索します')).toBeInTheDocument()
+      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
+      
+      // キーワード検索フィールドの確認
+      expect(screen.getByText('キーワード検索（ジャンル・料理名など）')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
     })
 
     it('LocationButtonが正しく表示される', () => {
@@ -120,11 +124,8 @@ describe('Home Page Integration Tests', () => {
           body: JSON.stringify({
             latitude: 35.6762,
             longitude: 139.6503,
-            radius: 1500,
-            type: 'restaurant',
             language: 'ja',
-            includeAllTypes: true,
-            genres: []
+            query: ''
           }),
         })
       })
@@ -132,7 +133,7 @@ describe('Home Page Integration Tests', () => {
       // レストラン表示の確認
       await waitFor(() => {
         expect(screen.getByText('近くのレストラン (2件)')).toBeInTheDocument()
-        expect(screen.getByText('現在地から1.5km以内のレストラン')).toBeInTheDocument()
+        expect(screen.getByText('現在地から近くのレストラン')).toBeInTheDocument()
       })
 
       // 各レストランカードの表示確認
@@ -365,7 +366,7 @@ describe('Home Page Integration Tests', () => {
 
       // 初期状態に戻ることを確認
       expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から1.5km以内の レストランを検索します')).toBeInTheDocument()
+      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
     })
 
@@ -412,7 +413,7 @@ describe('Home Page Integration Tests', () => {
 
       // 初期状態に戻ることを確認
       expect(screen.getByText('レストランを検索')).toBeInTheDocument()
-      expect(screen.getByText('現在地から1.5km以内の レストランを検索します')).toBeInTheDocument()
+      expect(screen.getByText('現在地から近くのレストランを検索します')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
     })
   })

@@ -65,18 +65,6 @@ const GENRE_MAPPING: Record<string, string> = {
   casual_dining_restaurant: 'カジュアルダイニング',
 };
 
-// Google Places APIのNearby Searchで検索可能なタイプ（実際にtypeパラメータとして使用可能）
-const SEARCHABLE_TYPES = [
-  'restaurant',
-  'ramen_restaurant',
-  'japanese_restaurant',
-  'asian_restaurant',
-  'cafe', 
-  'bakery',
-  'meal_delivery',
-  'meal_takeaway',
-  'bar'
-];
 
 /**
  * Google Places APIのタイプを日本語のジャンル名に変換する
@@ -102,27 +90,3 @@ export function getDisplayGenres(types: string[] = [], maxCount: number = 3): st
   return genres;
 }
 
-/**
- * 利用可能なすべてのジャンルを取得する（フィルタリング用）
- * @returns ジャンルのマッピング
- */
-export function getAllGenres(): Record<string, string> {
-  return { ...GENRE_MAPPING };
-}
-
-/**
- * 検索可能なタイプのみを取得する
- * @returns 検索可能なタイプの配列
- */
-export function getSearchableTypes(): string[] {
-  return [...SEARCHABLE_TYPES];
-}
-
-/**
- * 指定されたジャンルタイプが検索可能かどうかを判定する
- * @param type ジャンルタイプ
- * @returns 検索可能な場合はtrue
- */
-export function isSearchableType(type: string): boolean {
-  return SEARCHABLE_TYPES.includes(type);
-}

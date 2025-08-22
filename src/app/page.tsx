@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
-import GenreSelector from '@/components/GenreSelector';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
 import { calculateDistance } from '@/utils/distance';
 import { getDisplayGenres } from '@/utils/genre';
@@ -19,8 +18,8 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [searchRadius, setSearchRadius] = useState<number>(1500);
   const [sortOption, setSortOption] = useState<SortOption>('default');
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [genreFilter, setGenreFilter] = useState<string[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [filterKeyword, setFilterKeyword] = useState<string>('');
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
@@ -36,11 +35,8 @@ export default function Home() {
         body: JSON.stringify({
           latitude,
           longitude,
-          radius: searchRadius,
-          type: 'restaurant',
           language: 'ja',
-          includeAllTypes: selectedGenres.length === 0,
-          genres: selectedGenres
+          query: searchKeyword
         }),
       });
 
@@ -108,20 +104,29 @@ export default function Home() {
     setError('');
     setRestaurants([]);
     setUserLocation(null);
-    setSelectedGenres([]);
-    setGenreFilter([]);
+    setSearchKeyword('');
+    setFilterKeyword('');
     setSortOption('default');
   };
 
   const sortedAndFilteredRestaurants = useMemo(() => {
     if (!restaurants.length) return [];
     
-    // まずジャンルフィルタリングを適用
+    // キーワードフィルタリングを適用
     let filtered = [...restaurants];
-    if (genreFilter.length > 0) {
-      filtered = restaurants.filter(restaurant =>
-        restaurant.types && restaurant.types.some(type => genreFilter.includes(type))
-      );
+    if (filterKeyword.trim()) {
+      const keyword = filterKeyword.toLowerCase();
+      filtered = restaurants.filter(restaurant => {
+        // レストラン名、住所、ジャンル名で検索
+        const searchText = [
+          restaurant.name,
+          restaurant.address,
+          restaurant.vicinity,
+          ...(restaurant.types?.map(type => getDisplayGenres([type], 10)).flat() || [])
+        ].join(' ').toLowerCase();
+        
+        return searchText.includes(keyword);
+      });
     }
     
     // 次にソートを適用
@@ -156,7 +161,7 @@ export default function Home() {
       default:
         return filtered;
     }
-  }, [restaurants, sortOption, userLocation, genreFilter]);
+  }, [restaurants, sortOption, userLocation, filterKeyword]);
 
   const renderContent = () => {
     switch (searchState) {
@@ -174,37 +179,23 @@ export default function Home() {
                 レストランを検索
               </h2>
               <p className="text-gray-600 text-sm">
-                現在地から{searchRadius / 1000}km以内の レストランを検索します
+                現在地から近くのレストランを検索します
               </p>
             </div>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                検索範囲: {searchRadius / 1000}km
+                キーワード検索（ジャンル・料理名など）
               </label>
               <input
-                type="range"
-                min="500"
-                max="5000"
-                step="100"
-                value={searchRadius}
-                onChange={(e) => setSearchRadius(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                type="text"
+                placeholder="例: ラーメン、イタリアン、寿司"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>0.5km</span>
-                <span>5km</span>
-              </div>
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ジャンル（複数選択可）
-              </label>
-              <GenreSelector
-                selectedGenres={selectedGenres}
-                onGenreChange={setSelectedGenres}
-                variant="pills"
-                className="w-full"
-              />
+              <p className="text-xs text-gray-500 mt-1">
+                空白の場合は全てのレストランを検索します
+              </p>
             </div>
             <LocationButton
               onLocationSuccess={handleLocationSuccess}
@@ -233,10 +224,11 @@ export default function Home() {
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
                 近くのレストラン ({sortedAndFilteredRestaurants.length}件
-                {genreFilter.length > 0 && ` / ${restaurants.length}件中`})
+                {filterKeyword.trim() && ` / ${restaurants.length}件中`})
               </h2>
               <p className="text-gray-600">
-                現在地から{searchRadius / 1000}km以内のレストラン
+                現在地から近くのレストラン
+                {searchKeyword.trim() && ` (検索: ${searchKeyword})`}
               </p>
             </div>
 
@@ -250,13 +242,17 @@ export default function Home() {
               
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <label htmlFor="genre-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                    ジャンル:
+                  <label htmlFor="filter-keyword" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    絞り込み:
                   </label>
-                  <GenreSelector
-                    selectedGenres={genreFilter}
-                    onGenreChange={setGenreFilter}
-                    className="min-w-[180px]"
+                  <input
+                    id="filter-keyword"
+                    type="text"
+                    placeholder="キーワードで絞り込み"
+                    value={filterKeyword}
+                    onChange={(e) => setFilterKeyword(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    style={{ minWidth: '180px' }}
                   />
                 </div>
                 

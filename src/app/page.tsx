@@ -202,7 +202,7 @@ export default function Home() {
             
             {searchKeyword && (
               <p className="text-sm text-gray-500 mt-2">
-                "{searchKeyword}" で検索します。空白の場合は全てのレストランを検索します。
+                &quot;{searchKeyword}&quot; で検索します。空白の場合は全てのレストランを検索します。
               </p>
             )}
           </div>
@@ -258,7 +258,7 @@ export default function Home() {
                     </h2>
                     {searchKeyword.trim() && (
                       <p className="text-gray-600 text-sm">
-                        検索: "{searchKeyword}"
+                        検索: &quot;{searchKeyword}&quot;
                       </p>
                     )}
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
@@ -10,6 +10,16 @@ import { getDisplayGenres } from '@/utils/genre';
 type SearchState = 'idle' | 'getting-location' | 'searching' | 'success' | 'error';
 type SortOption = 'default' | 'rating' | 'distance' | 'price-low' | 'price-high';
 
+// セッションストレージのキー（コンポーネント外で定義してuseEffectの依存関係警告を回避）
+const STORAGE_KEYS = {
+  searchState: 'nearbyeats_searchState',
+  restaurants: 'nearbyeats_restaurants',
+  userLocation: 'nearbyeats_userLocation',
+  sortOption: 'nearbyeats_sortOption',
+  searchKeyword: 'nearbyeats_searchKeyword',
+  filterKeyword: 'nearbyeats_filterKeyword',
+};
+
 export default function Home() {
   const [searchState, setSearchState] = useState<SearchState>('idle');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -18,6 +28,85 @@ export default function Home() {
   const [sortOption, setSortOption] = useState<SortOption>('default');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [filterKeyword, setFilterKeyword] = useState<string>('');
+  
+  // ページロード時に状態を復元
+  useEffect(() => {
+    try {
+      const savedSearchState = sessionStorage.getItem(STORAGE_KEYS.searchState);
+      const savedRestaurants = sessionStorage.getItem(STORAGE_KEYS.restaurants);
+      const savedUserLocation = sessionStorage.getItem(STORAGE_KEYS.userLocation);
+      const savedSortOption = sessionStorage.getItem(STORAGE_KEYS.sortOption);
+      const savedSearchKeyword = sessionStorage.getItem(STORAGE_KEYS.searchKeyword);
+      const savedFilterKeyword = sessionStorage.getItem(STORAGE_KEYS.filterKeyword);
+
+      if (savedSearchState) {
+        setSearchState(savedSearchState as SearchState);
+      }
+      if (savedRestaurants) {
+        setRestaurants(JSON.parse(savedRestaurants));
+      }
+      if (savedUserLocation) {
+        setUserLocation(JSON.parse(savedUserLocation));
+      }
+      if (savedSortOption) {
+        setSortOption(savedSortOption as SortOption);
+      }
+      if (savedSearchKeyword) {
+        setSearchKeyword(savedSearchKeyword);
+      }
+      if (savedFilterKeyword) {
+        setFilterKeyword(savedFilterKeyword);
+      }
+    } catch (error) {
+      console.error('Failed to restore state from sessionStorage:', error);
+    }
+  }, []);
+
+  // 状態変更時にセッションストレージに保存
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.searchState, searchState);
+    }
+  }, [searchState]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.restaurants, JSON.stringify(restaurants));
+    }
+  }, [restaurants]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.userLocation, JSON.stringify(userLocation));
+    }
+  }, [userLocation]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.sortOption, sortOption);
+    }
+  }, [sortOption]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.searchKeyword, searchKeyword);
+    }
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.filterKeyword, filterKeyword);
+    }
+  }, [filterKeyword]);
+
+  // セッションストレージをクリアする関数
+  const clearSessionStorage = () => {
+    if (typeof window !== 'undefined') {
+      Object.values(STORAGE_KEYS).forEach(key => {
+        sessionStorage.removeItem(key);
+      });
+    }
+  };
 
   const handleLocationSuccess = async (latitude: number, longitude: number) => {
     setSearchState('searching');
@@ -101,6 +190,11 @@ export default function Home() {
     } else {
       setSearchState('idle');
       setRestaurants([]);
+      setUserLocation(null);
+      setSearchKeyword('');
+      setFilterKeyword('');
+      setSortOption('default');
+      clearSessionStorage();
     }
   };
 

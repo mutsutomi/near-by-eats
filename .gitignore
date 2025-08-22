@@ -93,3 +93,6 @@ storybook-static/
 # Temporary folders
 tmp/
 temp/
+
+# Serena MCP Server
+.serena/

@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: PlacesApiRequest = await request.json();
-    const { latitude, longitude, radius = 1500, language = 'ja', query } = body;
+    const { latitude, longitude, language = 'ja', query } = body;
 
     if (!latitude || !longitude) {
       return NextResponse.json(
@@ -122,83 +122,97 @@ export async function POST(request: NextRequest) {
       } as PlacesApiResponse);
     }
 
-    console.log(`Search query: "${query || 'restaurants'}" at coordinates: ${latitude}, ${longitude}`);
+    console.log(`Search query: "${query || 'all restaurants'}" at coordinates: ${latitude}, ${longitude}`);
 
     const allRestaurants: Restaurant[] = [];
-    const TIMEOUT_MS = 15000; // 15秒のタイムアウト
+    const TIMEOUT_MS = 15000;
     const startTime = Date.now();
 
-    try {
-      let url: string;
+    // 段階的半径拡大: 500m → 1km → 2km
+    const radiusSteps = [500, 1000, 2000];
+    
+    for (const radius of radiusSteps) {
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        console.log('Timeout reached, returning current results');
+        break;
+      }
+
+      console.log(`Searching with radius: ${radius}m`);
       
-      if (query && query.trim()) {
-        // フリーワードが指定されている場合はText Search APIを使用
-        const searchQuery = `${query.trim()} restaurants near ${latitude},${longitude}`;
-        url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${latitude},${longitude}&radius=${radius}&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
-        console.log(`Using Text Search with query: "${searchQuery}"`);
-      } else {
-        // フリーワードが指定されていない場合はNearby Searchで一般的なレストランを検索
-        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=restaurant&language=${language}&key=${GOOGLE_MAPS_API_KEY}`;
-        console.log('Using Nearby Search for general restaurants');
-      }
+      try {
+        // Nearby Search APIを使用（コスト効率を優先）
+        let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=restaurant&language=${language}`;
+        
+        // keywordパラメータでジャンル絞り込み
+        if (query && query.trim()) {
+          url += `&keyword=${encodeURIComponent(query.trim())}`;
+          console.log(`Using keyword: "${query.trim()}"`);
+        }
+        
+        url += `&key=${GOOGLE_MAPS_API_KEY}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+        const response = await fetch(url);
+        const data = await response.json();
 
-      console.log(`API Response:`, {
-        status: data.status,
-        resultsCount: data.results?.length || 0,
-        error_message: data.error_message
-      });
-
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        console.error('Google Places API error:', data.status, data.error_message);
-        return NextResponse.json({
-          restaurants: [],
+        console.log(`API Response (${radius}m):`, {
           status: data.status,
-          error_message: data.error_message || 'Google Places APIでエラーが発生しました'
-        } as PlacesApiResponse);
-      }
+          resultsCount: data.results?.length || 0,
+          error_message: data.error_message
+        });
 
-      // レストランデータを追加
-      if (data.results && data.results.length > 0) {
-        console.log(`Sample results (first 3):`, 
-          data.results.slice(0, 3).map((place: any) => ({
+        if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+          console.error(`Google Places API error (${radius}m):`, data.status, data.error_message);
+          continue; // 次の半径で試行
+        }
+
+        // レストランデータを追加
+        if (data.results && data.results.length > 0) {
+          console.log(`Sample results (${radius}m, first 3):`, 
+            data.results.slice(0, 3).map((place: any) => ({
+              name: place.name,
+              types: place.types,
+              vicinity: place.vicinity
+            }))
+          );
+          
+          const restaurants: Restaurant[] = data.results.map((place: any) => ({
+            id: place.place_id || place.id,
             name: place.name,
+            rating: place.rating,
+            address: place.formatted_address || place.vicinity,
+            vicinity: place.vicinity,
+            place_id: place.place_id,
+            geometry: place.geometry,
             types: place.types,
-            vicinity: place.vicinity
-          }))
-        );
-        
-        const restaurants: Restaurant[] = data.results.map((place: any) => ({
-          id: place.place_id || place.id,
-          name: place.name,
-          rating: place.rating,
-          address: place.formatted_address || place.vicinity,
-          vicinity: place.vicinity,
-          place_id: place.place_id,
-          geometry: place.geometry,
-          types: place.types,
-          opening_hours: place.opening_hours,
-          price_level: place.price_level
-        }));
-        allRestaurants.push(...restaurants);
-        
-        console.log(`Found ${data.results.length} restaurants`);
-      } else {
-        console.log('No restaurants found');
-      }
+            opening_hours: place.opening_hours,
+            price_level: place.price_level
+          }));
 
-    } catch (error) {
-      console.error('Search execution error:', error);
-      return NextResponse.json({
-        restaurants: [],
-        status: 'ERROR',
-        error_message: '検索中にエラーが発生しました'
-      } as PlacesApiResponse);
+          // 重複除去しながら追加
+          restaurants.forEach(restaurant => {
+            if (!allRestaurants.find(existing => existing.place_id === restaurant.place_id)) {
+              allRestaurants.push(restaurant);
+            }
+          });
+          
+          console.log(`Found ${data.results.length} restaurants (${radius}m), total unique: ${allRestaurants.length}`);
+          
+          // 十分な結果が得られた場合は終了
+          if (allRestaurants.length >= 20) {
+            console.log(`Sufficient results found (${allRestaurants.length}), stopping search`);
+            break;
+          }
+        } else {
+          console.log(`No restaurants found (${radius}m)`);
+        }
+
+      } catch (error) {
+        console.error(`Search execution error (${radius}m):`, error);
+        continue; // 次の半径で試行
+      }
     }
 
-    console.log(`Total restaurants found: ${allRestaurants.length}`);
+    console.log(`Total unique restaurants found: ${allRestaurants.length}`);
 
     return NextResponse.json({
       restaurants: allRestaurants,

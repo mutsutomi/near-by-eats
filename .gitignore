@@ -96,3 +96,10 @@ temp/
 
 # Serena MCP Server
 .serena/
+
+# Documentation artifacts (temporary files)
+*_artifact_*.md
+compass_artifact_*.md
+
+# Development tools artifacts
+.kiro/

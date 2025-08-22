@@ -204,11 +204,17 @@ near-by-eats/
 │   │   └── __tests__/           # コンポーネントテスト
 │   └── types/
 │       └── index.ts             # 型定義
-├── .kiro/specs/                 # 仕様書・設計書
-├── DEPLOYMENT.md                # デプロイメントガイド
+├── docs/                        # 📚 ドキュメント
+│   ├── development/             # 開発関連
+│   ├── deployment/              # デプロイ関連
+│   ├── design/                  # 設計・仕様関連
+│   └── operations/              # 運用関連
+├── scripts/                     # スクリプト
 ├── vercel.json                  # Vercel設定
 └── README.md                    # このファイル
 ```
+
+詳細なドキュメントは [docs/](./docs/) ディレクトリを参照してください。
 
 ## 🎯 使用方法
 

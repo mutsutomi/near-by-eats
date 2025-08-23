@@ -3,12 +3,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
+import SuggestionDisplay from '@/components/suggestion/SuggestionDisplay';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
 import { calculateDistance } from '@/utils/distance';
 import { getDisplayGenres } from '@/utils/genre';
 
 type SearchState = 'idle' | 'getting-location' | 'searching' | 'success' | 'error';
 type SortOption = 'default' | 'rating' | 'distance' | 'price-low' | 'price-high';
+type ViewMode = 'suggestion' | 'search';
 
 // セッションストレージのキー（コンポーネント外で定義してuseEffectの依存関係警告を回避）
 const STORAGE_KEYS = {
@@ -21,6 +23,7 @@ const STORAGE_KEYS = {
 };
 
 export default function Home() {
+  const [viewMode, setViewMode] = useState<ViewMode>('suggestion');
   const [searchState, setSearchState] = useState<SearchState>('idle');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [error, setError] = useState<string>('');
@@ -256,6 +259,12 @@ export default function Home() {
   const hasResults = searchState === 'success' && restaurants.length > 0;
   const hasError = searchState === 'error';
 
+  const handleRestaurantSelect = (restaurant: Restaurant) => {
+    // レストラン選択時の処理（詳細ページへの遷移など）
+    console.log('Selected restaurant:', restaurant);
+    // 将来的には詳細ページに遷移する
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
@@ -265,41 +274,74 @@ export default function Home() {
             Near-by Eats
           </h1>
           <p className="text-gray-600 text-lg">
-            現在地から近くのレストランを見つけます
+            {viewMode === 'suggestion' 
+              ? 'AIが選ぶ最適な3つの選択肢' 
+              : '現在地から近くのレストランを見つけます'
+            }
           </p>
+          
+          {/* モード切り替えボタン */}
+          <div className="mt-6 flex justify-center">
+            <div className="bg-white rounded-full p-1 shadow-lg">
+              <button
+                onClick={() => setViewMode('suggestion')}
+                className={`px-6 py-2 rounded-full font-medium transition-all duration-200 ${
+                  viewMode === 'suggestion'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                AI提案モード
+              </button>
+              <button
+                onClick={() => setViewMode('search')}
+                className={`px-6 py-2 rounded-full font-medium transition-all duration-200 ${
+                  viewMode === 'search'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                検索モード
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* 検索フォーム（常に表示） */}
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* キーワード入力 */}
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="例: ラーメン、イタリアン、寿司"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+        {/* コンテンツ表示 */}
+        {viewMode === 'suggestion' ? (
+          <SuggestionDisplay onRestaurantSelect={handleRestaurantSelect} />
+        ) : (
+          <div className="max-w-4xl mx-auto">
+            {/* 検索フォーム */}
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* キーワード入力 */}
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="例: ラーメン、イタリアン、寿司"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder:text-gray-800"
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                {/* 検索ボタン */}
+                <LocationButton
+                  onLocationSuccess={handleLocationSuccess}
+                  onLocationError={handleLocationError}
+                  className="sm:w-auto px-6 py-3"
                   disabled={isLoading}
                 />
               </div>
               
-              {/* 検索ボタン */}
-              <LocationButton
-                onLocationSuccess={handleLocationSuccess}
-                onLocationError={handleLocationError}
-                className="sm:w-auto px-6 py-3"
-                disabled={isLoading}
-              />
+              {searchKeyword && (
+                <p className="text-sm text-gray-500 mt-2">
+                  &quot;{searchKeyword}&quot; で検索します。空白の場合は全てのレストランを検索します。
+                </p>
+              )}
             </div>
-            
-            {searchKeyword && (
-              <p className="text-sm text-gray-500 mt-2">
-                &quot;{searchKeyword}&quot; で検索します。空白の場合は全てのレストランを検索します。
-              </p>
-            )}
-          </div>
 
           {/* ローディング状態 */}
           {isLoading && (
@@ -369,7 +411,7 @@ export default function Home() {
                         placeholder="キーワード"
                         value={filterKeyword}
                         onChange={(e) => setFilterKeyword(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-gray-800"
                         style={{ minWidth: '140px' }}
                       />
                     </div>
@@ -423,7 +465,8 @@ export default function Home() {
               )}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </main>
   );

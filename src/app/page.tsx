@@ -347,7 +347,7 @@ export default function Home() {
                     placeholder="例: ラーメン、イタリアン、寿司"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder:text-gray-800"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-gray-50 text-lg text-gray-900 placeholder:text-gray-500"
                     disabled={isLoading}
                   />
                 </div>
@@ -436,7 +436,7 @@ export default function Home() {
                         placeholder="キーワード"
                         value={filterKeyword}
                         onChange={(e) => setFilterKeyword(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-gray-800"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-gray-50 text-sm text-gray-900 placeholder:text-gray-500"
                         style={{ minWidth: '140px' }}
                       />
                     </div>

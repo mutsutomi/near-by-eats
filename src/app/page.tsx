@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import LocationButton from '@/components/LocationButton';
 import RestaurantCard from '@/components/RestaurantCard';
-import SuggestionDisplay from '@/components/suggestion/SuggestionDisplay';
+// import SuggestionDisplay from '@/components/suggestion/SuggestionDisplay';
 import { Restaurant, LocationError, PlacesApiResponse } from '@/types';
 import { calculateDistance } from '@/utils/distance';
 import { getDisplayGenres } from '@/utils/genre';
@@ -309,7 +309,32 @@ export default function Home() {
 
         {/* コンテンツ表示 */}
         {viewMode === 'suggestion' ? (
-          <SuggestionDisplay onRestaurantSelect={handleRestaurantSelect} />
+          <div className="max-w-5xl mx-auto px-4 py-8">
+            <div className="text-center py-16">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+                AI提案機能（準備中）
+              </h2>
+              <p className="text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">
+                AI機能は現在開発中です。<br />
+                検索モードをご利用ください。
+              </p>
+              <button
+                onClick={() => setViewMode('search')}
+                className="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 
+                         hover:from-blue-700 hover:to-indigo-700 text-white rounded-full 
+                         font-semibold text-lg transition-all duration-200 
+                         shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                検索モードを使う
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="max-w-4xl mx-auto">
             {/* 検索フォーム */}

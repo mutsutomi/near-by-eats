@@ -57,27 +57,45 @@ describe('Home Page Integration Tests', () => {
 
       // タイトルとサブタイトルの確認
       expect(screen.getByText('Near-by Eats')).toBeInTheDocument()
-      expect(screen.getByText('現在地から近くのレストランを見つけます')).toBeInTheDocument()
+      expect(screen.getByText('AIが選ぶ最適な3つの選択肢')).toBeInTheDocument()
 
-      // 初期状態のコンテンツ確認（検索フォームは常に表示）
-      expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
-      
-      // キーワード検索フィールドの確認
-      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
+      // モード切り替えボタンの確認
+      expect(screen.getByText('AI提案モード')).toBeInTheDocument()
+      expect(screen.getByText('検索モード')).toBeInTheDocument()
+
+      // 初期状態はAI提案モードで表示される（準備中）
+      expect(screen.getByText('AI提案機能（準備中）')).toBeInTheDocument()
+      expect(screen.getByText(/AI機能は現在開発中です/)).toBeInTheDocument()
+      expect(screen.getByText('検索モードを使う')).toBeInTheDocument()
     })
 
-    it('LocationButtonが正しく表示される', () => {
+    it('検索モードに切り替えができる', async () => {
+      const user = userEvent.setup()
       render(<Home />)
 
-      const locationButton = screen.getByRole('button', { name: '現在地から近くのレストランを検索' })
-      expect(locationButton).toBeInTheDocument()
-      expect(locationButton).not.toBeDisabled()
-      expect(screen.getByText('現在地から検索')).toBeInTheDocument()
+      // 検索モードボタンをクリック
+      const searchModeButton = screen.getByText('検索モード')
+      await user.click(searchModeButton)
+
+      // 検索モードのUIが表示される
+      expect(screen.getByText('現在地から近くのレストランを見つけます')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('例: ラーメン、イタリアン、寿司')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '現在地から近くのレストランを検索' })).toBeInTheDocument()
+    })
+
+    it('AIモードで準備中メッセージが正しく表示される', () => {
+      render(<Home />)
+
+      const switchButton = screen.getByText('検索モードを使う')
+      expect(switchButton).toBeInTheDocument()
+      expect(switchButton).not.toBeDisabled()
     })
   })
 
-  describe('位置情報取得からレストラン表示までの完全フロー', () => {
+  describe('検索モードでの位置情報取得からレストラン表示までの完全フロー', () => {
     it('成功フロー: 位置情報取得 → API呼び出し → レストラン表示', async () => {
+      const user = userEvent.setup()
+
       // Mock successful geolocation
       const mockPosition = {
         coords: {
@@ -94,6 +112,12 @@ describe('Home Page Integration Tests', () => {
         writable: true,
       })
 
+      render(<Home />)
+
+      // 検索モードに切り替え
+      const searchModeButton = screen.getByText('検索モード')
+      await user.click(searchModeButton)
+
       // Mock successful API response
       const mockApiResponse: PlacesApiResponse = {
         restaurants: mockRestaurants,
@@ -105,11 +129,9 @@ describe('Home Page Integration Tests', () => {
         json: () => Promise.resolve(mockApiResponse)
       })
 
-      render(<Home />)
-
       // 位置情報取得ボタンをクリック
       const locationButton = screen.getByRole('button', { name: '現在地から近くのレストランを検索' })
-      await userEvent.click(locationButton)
+      await user.click(locationButton)
 
       // API呼び出しが正しく行われることを確認
       await waitFor(() => {
@@ -143,6 +165,8 @@ describe('Home Page Integration Tests', () => {
     })
 
     it('レストランが0件の場合の処理', async () => {
+      const user = userEvent.setup()
+
       // Mock successful geolocation
       const mockPosition = {
         coords: {
@@ -172,8 +196,12 @@ describe('Home Page Integration Tests', () => {
 
       render(<Home />)
 
+      // 検索モードに切り替え
+      const searchModeButton = screen.getByText('検索モード')
+      await user.click(searchModeButton)
+
       const locationButton = screen.getByRole('button', { name: '現在地から近くのレストランを検索' })
-      await userEvent.click(locationButton)
+      await user.click(locationButton)
 
       // エラー状態の表示確認
       await waitFor(() => {

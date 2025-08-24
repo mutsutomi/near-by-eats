@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
     // 段階的半径拡大: 100m → 300m → 500m → 1km → 2km（より近い店を優先）
     const radiusSteps = [100, 300, 500, 1000, 2000];
     
-    // 飲食店の種類を拡大して検索精度を向上
-    const foodTypes = ['restaurant', 'meal_takeaway', 'cafe', 'bakery', 'food'];
+    // 飲食店の種類を拡大して検索精度を向上（具体的な飲食店タイプのみに限定）
+    const foodTypes = ['restaurant', 'meal_takeaway', 'cafe', 'bakery', 'bar', 'meal_delivery'];
     
     for (const radius of radiusSteps) {
       if (Date.now() - startTime > TIMEOUT_MS) {

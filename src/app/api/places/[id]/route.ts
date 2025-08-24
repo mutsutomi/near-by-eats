@@ -30,6 +30,26 @@ const DEMO_RESTAURANT_DETAILS: Record<string, any> = {
     price_level: 2,
     formatted_phone_number: '03-1234-5678',
     website: 'https://example.com/kagetsu',
+    photos: [
+      {
+        photo_reference: 'demo_photo_1_japanese',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      },
+      {
+        photo_reference: 'demo_photo_2_japanese',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      },
+      {
+        photo_reference: 'demo_photo_3_japanese',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      }
+    ],
     reviews: [
       {
         author_name: '田中太郎',
@@ -77,6 +97,20 @@ const DEMO_RESTAURANT_DETAILS: Record<string, any> = {
     price_level: 3,
     formatted_phone_number: '03-2345-6789',
     website: 'https://example.com/bellavista',
+    photos: [
+      {
+        photo_reference: 'demo_photo_1_italian',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      },
+      {
+        photo_reference: 'demo_photo_2_italian',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      }
+    ],
     reviews: [
       {
         author_name: '鈴木美咲',
@@ -118,6 +152,26 @@ const DEMO_RESTAURANT_DETAILS: Record<string, any> = {
     price_level: 1,
     formatted_phone_number: '03-3456-7890',
     website: 'https://example.com/aozora',
+    photos: [
+      {
+        photo_reference: 'demo_photo_1_cafe',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      },
+      {
+        photo_reference: 'demo_photo_2_cafe',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      },
+      {
+        photo_reference: 'demo_photo_3_cafe',
+        width: 800,
+        height: 600,
+        html_attributions: []
+      }
+    ],
     reviews: [
       {
         author_name: '伊藤さくら',

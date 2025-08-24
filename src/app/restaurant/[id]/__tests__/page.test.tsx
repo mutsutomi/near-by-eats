@@ -74,11 +74,11 @@ describe('RestaurantDetailPage', () => {
       expect(screen.getByText('和食レストラン 花月')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('4.2')).toBeInTheDocument();
-    expect(screen.getByText('東京都渋谷区渋谷1-1-1')).toBeInTheDocument();
-    expect(screen.getByText('営業中')).toBeInTheDocument();
+    expect(screen.getAllByText('4.2')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('東京都渋谷区渋谷1-1-1')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('営業中')[0]).toBeInTheDocument();
     expect(screen.getByText('03-1234-5678')).toBeInTheDocument();
-    expect(screen.getByText('公式サイトを開く')).toBeInTheDocument();
+    expect(screen.getByText('公式サイト')).toBeInTheDocument();
     expect(screen.getByText('営業時間')).toBeInTheDocument();
     expect(screen.getByText('レビュー')).toBeInTheDocument();
     expect(screen.getByText('田中太郎')).toBeInTheDocument();
@@ -166,7 +166,7 @@ describe('RestaurantDetailPage', () => {
       expect(screen.getByText('シンプルレストラン')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('東京都渋谷区渋谷1-1-1')).toBeInTheDocument();
+    expect(screen.getAllByText('東京都渋谷区渋谷1-1-1')[0]).toBeInTheDocument();
     // オプショナルフィールドが表示されないことを確認
     expect(screen.queryByText('営業時間')).not.toBeInTheDocument();
     expect(screen.queryByText('レビュー')).not.toBeInTheDocument();

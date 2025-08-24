@@ -36,3 +36,42 @@ export interface LocationError {
   code: number;
   message: string;
 }
+
+// Suggestion Engine Types
+export interface SuggestionCriteria {
+  location: { lat: number; lng: number };
+  timeContext: {
+    hour: number;
+    dayOfWeek: number;
+    isHoliday: boolean;
+  };
+  userPreferences?: {
+    recentVisits?: string[];
+    avoidCategories?: string[];
+  };
+  groupSize?: number;
+}
+
+export interface ScoredRestaurant extends Restaurant {
+  score: number;
+  distances?: {
+    physical: number;
+    walking: number;
+  };
+  scoreBreakdown?: {
+    distance: number;
+    rating: number;
+    timeRelevance: number;
+    diversity: number;
+  };
+}
+
+export interface SuggestionResult {
+  restaurants: Restaurant[];
+  metadata: {
+    totalSearched: number;
+    diversityScore: number;
+    averageDistance: number;
+    generatedAt: number;
+  };
+}

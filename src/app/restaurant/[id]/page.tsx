@@ -394,20 +394,6 @@ export default function RestaurantDetailPage() {
                   </p>
                 </div>
 
-                {/* 詳細情報 */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">お店について</h3>
-                  <div className="prose prose-sm text-gray-700">
-                    <p>
-                      {restaurant.name}は{restaurant.vicinity || restaurant.address?.split('、')[0] || ''}エリアにある
-                      {restaurant.types?.includes('restaurant') ? 'レストラン' : 
-                       restaurant.types?.includes('cafe') ? 'カフェ' : 
-                       '飲食店'}です。
-                      {restaurant.rating && ` ${restaurant.rating.toFixed(1)}の評価を得ており、`}
-                      地元で愛される人気のお店です。
-                    </p>
-                  </div>
-                </div>
               </div>
             </motion.div>
 

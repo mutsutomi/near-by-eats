@@ -14,6 +14,7 @@ type ViewMode = 'suggestion' | 'search';
 
 // セッションストレージのキー（コンポーネント外で定義してuseEffectの依存関係警告を回避）
 const STORAGE_KEYS = {
+  viewMode: 'nearbyeats_viewMode',
   searchState: 'nearbyeats_searchState',
   restaurants: 'nearbyeats_restaurants',
   userLocation: 'nearbyeats_userLocation',
@@ -35,6 +36,7 @@ export default function Home() {
   // ページロード時に状態を復元
   useEffect(() => {
     try {
+      const savedViewMode = sessionStorage.getItem(STORAGE_KEYS.viewMode);
       const savedSearchState = sessionStorage.getItem(STORAGE_KEYS.searchState);
       const savedRestaurants = sessionStorage.getItem(STORAGE_KEYS.restaurants);
       const savedUserLocation = sessionStorage.getItem(STORAGE_KEYS.userLocation);
@@ -42,6 +44,9 @@ export default function Home() {
       const savedSearchKeyword = sessionStorage.getItem(STORAGE_KEYS.searchKeyword);
       const savedFilterKeyword = sessionStorage.getItem(STORAGE_KEYS.filterKeyword);
 
+      if (savedViewMode) {
+        setViewMode(savedViewMode as ViewMode);
+      }
       if (savedSearchState) {
         setSearchState(savedSearchState as SearchState);
       }
@@ -66,6 +71,12 @@ export default function Home() {
   }, []);
 
   // 状態変更時にセッションストレージに保存
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.viewMode, viewMode);
+    }
+  }, [viewMode]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(STORAGE_KEYS.searchState, searchState);

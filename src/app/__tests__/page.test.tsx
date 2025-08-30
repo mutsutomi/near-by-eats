@@ -84,6 +84,16 @@ describe('Home Page Integration Tests', () => {
     })
 
     it('AIモードで準備中メッセージが正しく表示される', () => {
+      // sessionStorageをクリアして初期状態をテスト
+      Object.defineProperty(window, 'sessionStorage', {
+        value: {
+          getItem: jest.fn(() => null),
+          setItem: jest.fn(() => null),
+          removeItem: jest.fn(() => null),
+        },
+        writable: true
+      });
+      
       render(<Home />)
 
       const switchButton = screen.getByText('検索モードを使う')

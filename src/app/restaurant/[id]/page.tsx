@@ -60,6 +60,42 @@ function PhotoGallery({ photos }: { photos: RestaurantDetail['photos'] }) {
             }}
           />
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-opacity duration-300" />
+          
+          {/* 画像送りボタン */}
+          {photos.length > 1 && (
+            <>
+              {/* 前の画像ボタン */}
+              <motion.button
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-opacity"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPhoto(selectedPhoto > 0 ? selectedPhoto - 1 : photos.length - 1);
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </motion.button>
+
+              {/* 次の画像ボタン */}
+              <motion.button
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-opacity"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPhoto(selectedPhoto < photos.length - 1 ? selectedPhoto + 1 : 0);
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </motion.button>
+            </>
+          )}
+
           <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
             {selectedPhoto + 1} / {photos.length}
           </div>
@@ -109,6 +145,7 @@ function PhotoGallery({ photos }: { photos: RestaurantDetail['photos'] }) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
             >
               <img
                 src={`/api/places/photo/${photos[selectedPhoto].photo_reference}?maxwidth=1200`}
@@ -119,6 +156,41 @@ function PhotoGallery({ photos }: { photos: RestaurantDetail['photos'] }) {
                   target.src = 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&auto=format';
                 }}
               />
+
+              {/* モーダル内の画像送りボタン */}
+              {photos.length > 1 && (
+                <>
+                  {/* 前の画像ボタン */}
+                  <motion.button
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-3 transition-opacity"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      setSelectedPhoto(selectedPhoto > 0 ? selectedPhoto - 1 : photos.length - 1);
+                    }}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </motion.button>
+
+                  {/* 次の画像ボタン */}
+                  <motion.button
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-3 transition-opacity"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      setSelectedPhoto(selectedPhoto < photos.length - 1 ? selectedPhoto + 1 : 0);
+                    }}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </motion.button>
+                </>
+              )}
+
+              {/* 閉じるボタン */}
               <button
                 className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-opacity"
                 onClick={() => setShowModal(false)}
@@ -127,6 +199,11 @@ function PhotoGallery({ photos }: { photos: RestaurantDetail['photos'] }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+
+              {/* 画像カウンター */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-full text-sm">
+                {selectedPhoto + 1} / {photos.length}
+              </div>
             </motion.div>
           </motion.div>
         )}
